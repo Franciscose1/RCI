@@ -50,5 +50,5 @@ void list_streams(void)
   if((errcode=getnameinfo((struct sockaddr *)&addr,addrlen,host,sizeof host,service,sizeof service,0))!=0)
     fprintf(stderr,"error: getnameinfo: %s\n",gai_strerror(errcode));
   else
-    printf("sent by [%s:%s]\n",host,service);
+    printf("Sent by [%s:%s]\n",host,service);
 }
