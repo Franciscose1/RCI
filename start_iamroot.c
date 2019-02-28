@@ -14,7 +14,7 @@ int main(int argc, char **argv)
     for(argcount=2;argcount<=argc;argcount++)
     {
 
-      printf("Hello"\n");
+      printf("Hello World"\n");
 
     }
   }
