@@ -13,6 +13,7 @@ int main(int argc, char **argv)
     //goes through all user passed arguments
     for(argcount=2;argcount<=argc;argcount++)
     {
+
       
     }
   }
