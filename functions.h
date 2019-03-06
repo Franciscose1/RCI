@@ -23,7 +23,8 @@ struct USER{
   int display;
   int detailed_info;
   int synopse;
-  enum {access_server,out,in} state;
+  enum {access_server,out,in,waiting} state;
+  int fd_udp_serv, fd_tcp_serv, fd_tcp_mont;
 };
 
 typedef struct USER User;
@@ -33,7 +34,7 @@ int str_to_IP_PORT(char *, char *, char *, char *, char *);
 void USER_init(User *);
 int read_args(int, char **, User *);
 void msg_in_protocol(char *, char *, User *);
-int handle_RSmessage(char *, User *, int *);
-int handle_ASmessage(char *, User *, int *);
+int handle_RSmessage(char *, User *);
+int handle_ASmessage(char *, User *);
 
 #endif

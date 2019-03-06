@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include "functions.h"
 
-void reach_tcp(char *, char *, int *);
+int reach_tcp(char *, char *);
 int serv_tcp(char *);
 
 #endif

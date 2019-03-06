@@ -2,6 +2,29 @@
 #include "udp.h"
 #include "tcp.h"
 
+int str_to_msgID(char *ptr, char *msgID)
+{
+  int n = 0, ncount = 0;
+
+  if(sscanf(ptr, "%s%n", msgID, &n)==1)
+  {
+    //printf("%s\n", stream_name);
+    ptr += n; /* advance the pointer by the number of characters read */
+    ncount += n;
+    if ((*ptr != ' ')&&(*ptr != '\n'))
+    {
+      printf("Incompatible with protocol\n");
+      return 0;
+      //strcpy(flag,"BAD_ID");
+    }
+    ncount++;
+  }else{
+    printf("Failed to read msg_ID\n");
+    return 0;
+  }
+  return ncount;
+}
+
 int str_to_IP_PORT(char *ptr, char *stream_name, char *ipaddr, char *port, char *flag)
 {
   int n = 0, ncount = 0;
@@ -170,7 +193,7 @@ void msg_in_protocol(char *msg, char *label, User *user)
 
 }
 
-int handle_RSmessage(char *msg, User *user, int *fd)
+int handle_RSmessage(char *msg, User *user)
 {
   int n = 0;
   char *ptr;
@@ -181,18 +204,8 @@ int handle_RSmessage(char *msg, User *user, int *fd)
   char buffer[128] = {'\0'};
 
   ptr = msg;
-  if(sscanf(ptr, "%s%n", msgID, &n)==1)
-  {
-    //printf("%s\n", stream_name);
-    ptr += n; /* advance the pointer by the number of characters read */
-    if ((*ptr != ' ')&&(*ptr != '\n'))
-    {
-      printf("Incompatible with protocol\n");
-      return 0;
-      //strcpy(flag,"BAD_ID");
-    }
-    ptr++;
-  }
+  ptr += str_to_msgID(ptr,msgID);
+
   if(strcmp(msgID,"URROOT")==0)
   {
     str_to_IP_PORT(ptr,stream_name,ipaddr,port,"streamID");
@@ -203,7 +216,9 @@ int handle_RSmessage(char *msg, User *user, int *fd)
       //strcpy(flag,"BAD_ID");
     }
     user->state = access_server;
-    *fd = serv_udp(user->uport);
+    user->fd_udp_serv = serv_udp(user->uport);
+    user->fd_tcp_serv = serv_tcp(user->tport);
+    user->fd_tcp_mont = reach_tcp(user->stream_addr,user->stream_port);
   }else if(strcmp(msgID,"ROOTIS")==0)
   {
     ptr += str_to_IP_PORT(ptr,stream_name,ipaddr,port,"streamID");
@@ -216,11 +231,12 @@ int handle_RSmessage(char *msg, User *user, int *fd)
     str_to_IP_PORT(ptr,stream_name,ipaddr,port,"addr");
     strcpy(msg,"POPREQ\n");
     reach_udp(ipaddr,port,msg);
+    user->state = waiting;
   }
   return 1;
 }
 
-int handle_ASmessage(char *msg, User *user, int *fd)
+int handle_ASmessage(char *msg, User *user)
 {
   int n = 0;
   char *ptr;
@@ -231,18 +247,8 @@ int handle_ASmessage(char *msg, User *user, int *fd)
   char buffer[128] = {'\0'};
 
   ptr = msg;
-  if(sscanf(ptr, "%s%n", msgID, &n)==1)
-  {
-    //printf("%s\n", stream_name);
-    ptr += n; /* advance the pointer by the number of characters read */
-    if ((*ptr != ' ') && (*ptr != '\n'))
-    {
-      printf("Incompatible with protocol\n");
-      return 0;
-      //strcpy(flag,"BAD_ID");
-    }
-    ptr++;
-  }
+  ptr += str_to_msgID(ptr,msgID);
+
   if(strcmp(msgID,"POPRESP")==0)
   {
     ptr += str_to_IP_PORT(ptr,stream_name,ipaddr,port,"streamID");
@@ -253,10 +259,13 @@ int handle_ASmessage(char *msg, User *user, int *fd)
       //strcpy(flag,"BAD_ID");
     }
     str_to_IP_PORT(ptr,stream_name,ipaddr,port,"addr");
-    reach_tcp(ipaddr,port,fd);
+    user->fd_tcp_mont = reach_tcp(ipaddr,port);
+    user->state = waiting;
   }else if(strcmp(msgID,"POPREQ")==0)
   {
-    reach_tcp("192.168.1.67","58000",fd);
+    //BATOTA, ta a mandar o seu POP
+    snprintf(msg, 128, "POPRESP %s:%s:%s %s:%s\n",
+    user->stream_name, user->stream_addr, user->stream_port, user->ipaddr, user->tport);
     return 1;
   }else return 0;
 

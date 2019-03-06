@@ -8,7 +8,11 @@
 #include <netdb.h>
 #include <string.h>
 #include <unistd.h>
+#include "functions.h"
 
-void list_streams(void);
+void reach_udp(char *, char *, char *);
+int send_udp(char *, char *, char *);
+void recieve_udp(int, char *);
+int serv_udp(char *);
 
 #endif

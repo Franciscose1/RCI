@@ -1,10 +1,10 @@
 #include "tcp.h"
 
-void reach_tcp(char *ip, char *port, int *fd)
+int reach_tcp(char *ip, char *port)
 {
   struct addrinfo hints, *res;
   struct sockaddr_in addr;
-  int n, errcode;
+  int n, errcode, fd;
 
   memset(&hints, 0, sizeof hints);
   hints.ai_family = AF_INET; //IPv4
@@ -18,17 +18,19 @@ void reach_tcp(char *ip, char *port, int *fd)
     exit(1);
   }
   //socket
-  if((*fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol))==-1)
+  if((fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol))==-1)
   {
-    printf("error: socket");
+    printf("error: socket\n");
     exit(1);
   }
   //connect
-  if((n=connect(*fd,res->ai_addr,res->ai_addrlen))==-1)
+  if((n=connect(fd,res->ai_addr,res->ai_addrlen))==-1)
   {
-    printf("error: connect");
+    printf("error: connect tcp\n");
     exit(1);
   }
+
+  return fd;
 }
 
 int serv_tcp(char *port)
@@ -54,7 +56,7 @@ int serv_tcp(char *port)
   }
   if(bind(fd,res->ai_addr,res->ai_addrlen)==-1)
   {
-    printf("error: bind\n");
+    printf("error: bind tcp\n");
     exit(1);
   }
   if(listen(fd,5)==-1)
