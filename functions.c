@@ -25,67 +25,33 @@ int str_to_msgID(char *ptr, char *msgID)
   return ncount;
 }
 
-int str_to_IP_PORT(char *ptr, char *stream_name, char *ipaddr, char *port, char *flag)
+int str_to_IP_PORT(char *ptr, char *ipaddr, char *port)
 {
   int n = 0, ncount = 0;
 
-  if(strcmp(flag,"streamID")==0)
+  if(sscanf(ptr, "%[^:]:%s%n", ipaddr, port, &n)!=2)
   {
-    if(sscanf(ptr, "%[^:]%n", stream_name, &n)==1)
-    {
-      //printf("%s\n", stream_name);
-      ptr += n; /* advance the pointer by the number of characters read */
-      ncount += n;
-      if ( *ptr != ':' )
-      {
-        printf("Incompatible with streamID protocol\n");
-        strcpy(flag,"BAD_ID");
-        return 0;
-      }
-      ptr++;
-      ncount++;
-    }else{
-      printf("Failed to read stream_name\n");
-      strcpy(flag,"BAD_ID");
-      return 0;
-    }
-  }
-  if(sscanf(ptr, "%[^:]%n", ipaddr, &n)==1)
-  {
-    //printf("%s\n", stream_addr);
-    ptr += n; /* advance the pointer by the number of characters read */
-    ncount += n;
-    if ( *ptr != ':' )
-    {
-      printf("Incompatible with addr protocol\n");
-      strcpy(flag,"BAD_ID");
-      return 0;
-    }
-    ptr++;
-    ncount++;
-  }else{
-    printf("Failed to read addr\n");
-    strcpy(flag,"BAD_ID");
+    printf("Unable to read ip:port\n");
     return 0;
   }
-  if(sscanf(ptr, "%s%n", port, &n)==1)
-  {
-    //printf("%s\n", stream_port);
-    ptr += n; /* advance the pointer by the number of characters read */
-    ncount += n;
-    if ( *ptr == '\0' || *ptr == '\n' || *ptr == ' ')
-    {
+  ncount += n;
+  ncount++;
 
-    }else{
-      printf("Incompatible with port protocol\n");
-      strcpy(flag,"BAD_ID");
-    }
-    ncount++;
-  }else{
-    printf("Failed to read port\n");
-    strcpy(flag,"BAD_ID");
+  return ncount;
+}
+
+int str_to_streamID(char *ptr, char *stream_name, char *ipaddr, char *port)
+{
+  int n = 0, ncount = 0;
+
+  if(sscanf(ptr, "%[^:]:%[^:]:%s%n", stream_name, ipaddr, port, &n)!=3)
+  {
+    printf("Unable to read sreamID\n");
     return 0;
   }
+  ncount += n;
+  ncount++;
+
   return ncount;
 }
 
@@ -107,7 +73,7 @@ void USER_init(User *user)
   user->synopse = OFF;
 }
 
-int read_args(int argc, char **argv, User *user)
+int read_args(int argc, char **argv, User *user) //Precisa defesa contra opção sem nada depois
 {
   int argcount = 0, n;
   char *ptr = NULL, flag[128] = {'\0'};
@@ -132,13 +98,25 @@ int read_args(int argc, char **argv, User *user)
     }else if(strcmp(argv[argcount],"-s") == 0)
     {
       argcount++;
-      if(argcount < argc)
+      ptr = argv[argcount];
+
+      if(sscanf(ptr, "%[^:]%n", user->rsaddr, &n)!=1)
       {
-        ptr = argv[argcount];
-        strcpy(flag,"addr");
-        str_to_IP_PORT(ptr, user->stream_name, user->rsaddr, user->rsport, flag);
-        if(strcmp(flag,"BAD_ID") == 0) return 0;
+        printf("unable to read root server IP\n");
+        return 0;
       }
+      ptr += n;
+      if(*ptr == ':')
+      {
+        ptr++;
+        if(sscanf(ptr, "%s%n", user->rsport, &n)!=1)
+        {
+          printf("unable to read root server port\n");
+          return 0;
+        }
+      }
+
+      printf("addr:%s port:%s\n", user->rsaddr, user->rsport);
     }else if(strcmp(argv[argcount],"-p") == 0)
     {
       argcount++;
@@ -164,14 +142,7 @@ int read_args(int argc, char **argv, User *user)
     }else{
       //Default case stands for streamID input
       ptr = argv[argcount];
-      strcpy(flag,"streamID");
-      //str_to_IP_PORT(ptr, user->stream_name, user->stream_addr, user->stream_port, flag);
-      //if(strcmp(flag,"BAD_ID") == 0) return 0;
-      if(sscanf(ptr, "%[^:]:%[^:]:%s%n", user->stream_name, user->stream_addr, user->stream_port, &n)!=3)
-      {
-        printf("BAD STREAM ID\n");
-        return 0;
-      }
+      str_to_streamID(ptr, user->stream_name, user->stream_addr, user->stream_port);
     }
   }
   if(strcmp(user->stream_name,"") == 0) return 0; //No stream specified
@@ -212,7 +183,7 @@ int handle_RSmessage(char *msg, User *user)
 
   if(strcmp(msgID,"URROOT")==0)
   {
-    str_to_IP_PORT(ptr,stream_name,ipaddr,port,"streamID");
+    str_to_streamID(ptr, stream_name, ipaddr, port);
     if((strcmp(stream_name,user->stream_name)!=0)||(strcmp(ipaddr,user->stream_addr)!=0)||(strcmp(port,user->stream_port)!=0))
     {
       printf("Incompatible stream\n");
@@ -225,14 +196,15 @@ int handle_RSmessage(char *msg, User *user)
     user->fd_tcp_mont = reach_tcp(user->stream_addr,user->stream_port);
   }else if(strcmp(msgID,"ROOTIS")==0)
   {
-    ptr += str_to_IP_PORT(ptr,stream_name,ipaddr,port,"streamID");
+    ptr += str_to_streamID(ptr, stream_name, ipaddr, port);
     if((strcmp(stream_name,user->stream_name)!=0)||(strcmp(ipaddr,user->stream_addr)!=0)||(strcmp(port,user->stream_port)!=0))
     {
       printf("Incompatible stream\n");
       return 0;
       //strcpy(flag,"BAD_ID");
     }
-    str_to_IP_PORT(ptr,stream_name,ipaddr,port,"addr");
+
+    str_to_IP_PORT(ptr, ipaddr, port);
     strcpy(msg,"POPREQ\n");
     reach_udp(ipaddr,port,msg);
     user->state = waiting;
@@ -255,14 +227,24 @@ int handle_ASmessage(char *msg, User *user)
 
   if(strcmp(msgID,"POPRESP")==0)
   {
-    ptr += str_to_IP_PORT(ptr,stream_name,ipaddr,port,"streamID");
+    if(sscanf(ptr, "%[^:]:%[^:]:%s%n", stream_name, ipaddr, port, &n)!=3)
+    {
+      printf("BAD STREAM ID\n");
+      return 0;
+    }
     if((strcmp(stream_name,user->stream_name)!=0)||(strcmp(ipaddr,user->stream_addr)!=0)||(strcmp(port,user->stream_port)!=0))
     {
       printf("Incompatible stream\n");
       return 0;
       //strcpy(flag,"BAD_ID");
     }
-    str_to_IP_PORT(ptr,stream_name,ipaddr,port,"addr");
+    ptr += n;
+    ptr++;
+    if(sscanf(ptr, "%[^:]:%s%n", ipaddr, port, &n)!=2)
+    {
+      printf("ip/port\n");
+      return 0;
+    }
     user->fd_tcp_mont = reach_tcp(ipaddr,port);
     user->state = waiting;
   }else if(strcmp(msgID,"POPREQ")==0)

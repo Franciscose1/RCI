@@ -30,7 +30,8 @@ struct USER{
 typedef struct USER User;
 
 //void str_to_IP_PORT(char *);
-int str_to_IP_PORT(char *, char *, char *, char *, char *);
+int str_to_IP_PORT(char *, char *, char *);
+int str_to_streamID(char *, char *, char *, char *);
 void USER_init(User *);
 int read_args(int, char **, User *);
 void msg_in_protocol(char *, char *, User *);

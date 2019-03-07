@@ -100,12 +100,11 @@ void recieve_udp(int fd, char *msg)
   addrlen = sizeof(addr);
   if((n=recvfrom(fd,buffer,128,0,(struct sockaddr*)&addr,&addrlen))==-1)
   {
-    printf("error: recvfrom");
+    printf("error: recvfrom\n");
     exit(1);
   }
   strcpy(msg,buffer);
   write(1,buffer,n);
-  close(fd);
 
   if((errcode=getnameinfo((struct sockaddr *)&addr,addrlen,host,sizeof host,service,sizeof service,0))!=0)
     fprintf(stderr,"error: getnameinfo: %s\n",gai_strerror(errcode));
