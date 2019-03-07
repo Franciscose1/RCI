@@ -72,12 +72,18 @@ int main(int argc, char **argv)
       FD_SET(user->fd_tcp_mont,&rfds);maxfd=max(maxfd,user->fd_tcp_mont);
     }
 
+    printf("fd_tcp_mont:%d\n", user->fd_tcp_mont);
+    printf("fd_tcp_serv:%d\n", user->fd_tcp_serv);
+    printf("fd_udp_serv:%d\n", user->fd_udp_serv);
+    printf("maxfd:%d\n", maxfd);
+
+    printf("SELECT\n");
     counter=select(maxfd+1,&rfds,(fd_set*)NULL,(fd_set*)NULL,(struct timeval *)NULL);
     if(counter<=0){printf("Counter <= 0\n");exit(1);}
 
-
     if(FD_ISSET(user->fd_udp_serv,&rfds) && user->state == access_server)
     {
+      printf("RECIEVE FROM\n");
       addrlen=sizeof(addr);
       nread=recvfrom(user->fd_udp_serv,buffer,128,0,(struct sockaddr*)&addr,&addrlen);
       if(nread==-1)/*error*/exit(1);
@@ -86,9 +92,11 @@ int main(int argc, char **argv)
       nread = strlen(buffer);
       n=sendto(user->fd_udp_serv,buffer,nread,0,(struct sockaddr*)&addr,addrlen);
       if(n==-1)/*error*/exit(1);
+      printf("RECIEVE FROM OUT\n");
     }
     if(FD_ISSET(user->fd_tcp_serv,&rfds) && user->state != waiting)
     {
+      printf("Accept\n");
       if((newfd=accept(user->fd_tcp_serv,(struct sockaddr*)&addr,&addrlen))==-1)
       {
         printf("error: accept\n");
@@ -106,6 +114,7 @@ int main(int argc, char **argv)
     {
       if((n=read(user->fd_tcp_mont,buffer,128))!=0)
       {
+        printf("Montante falou\n");
         if(n==-1){printf("error: read\n"); exit(1);}
         ptr=&buffer[0];
         while(n>0)
@@ -115,8 +124,8 @@ int main(int argc, char **argv)
         }
       }else{
         //This close crashes select because it tries to set it again
+        printf("Montante saiu\n");
         close(user->fd_tcp_mont);
-        close(user->fd_tcp_serv);
         user->state = out;
       }
     }
@@ -125,20 +134,26 @@ int main(int argc, char **argv)
       fgets(buffer, sizeof(buffer), stdin);
       if(strcmp(buffer,"root_out\n")==0)
       {
-        msg_in_protocol(msg,"REMOVE",user);
-        send_udp(user->rsaddr,user->rsport,msg);
-        printf("EXIT SUCCESSFULL\n");
+        if(user->state == access_server)
+        {
+          msg_in_protocol(msg,"REMOVE",user);
+          send_udp(user->rsaddr,user->rsport,msg);
+        }
+        close(newfd);
         close(user->fd_udp_serv);
         close(user->fd_tcp_serv);
         close(user->fd_tcp_mont);
-        close(newfd);
-        exit(1);
+
+        printf("EXIT SUCCESSFULL\n");
+        exit(0);
       }
     }
+
 
   }//while(1)
 
 }
 
-//./iamroot grupo44:192.168.1.67:57000 -i 192.168.1.67 -u 58001
-//./iamroot grupo44:194.210.159.48:57000 -i 194.210.159.48 -u 58001 -t 58001
+//./iamroot grupo44:193.136.138.142:59000 -i 194.210.157.208
+//./iamroot grupo44:193.136.138.142:59000 -i 194.210.157.208 -u 58001 -t 58001
+//./iamroot grupo44:193.136.138.142:58001 -i 192.168.1.67 -u 58001 -t 58001

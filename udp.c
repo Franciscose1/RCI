@@ -25,13 +25,13 @@ void reach_udp(char *ip, char *port, char *msg)
   //socket
   if((fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol))==-1)
   {
-    printf("error: socket");
+    printf("error: socket\n");
     exit(1);
   }
   //sendto
   if((n=sendto(fd,msg,strlen(msg),0,res->ai_addr,res->ai_addrlen))==-1)
   {
-    printf("error: sendto");
+    printf("error: sendto\n");
     exit(1);
   }
   //free addrinfo structure
@@ -41,7 +41,7 @@ void reach_udp(char *ip, char *port, char *msg)
   addrlen = sizeof(addr);
   if((n=recvfrom(fd,buffer,128,0,(struct sockaddr*)&addr,&addrlen))==-1)
   {
-    printf("error: recvfrom");
+    printf("error: recvfrom\n");
     exit(1);
   }
   strcpy(msg,buffer);
@@ -131,7 +131,7 @@ int serv_udp(char *port)
   }
   if((fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol))==-1)
   {
-    printf("error: socket");
+    printf("error: socket udp\n");
     exit(1);
   }
   if((n=bind(fd,res->ai_addr,res->ai_addrlen))==-1)

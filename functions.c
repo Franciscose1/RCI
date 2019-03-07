@@ -167,12 +167,8 @@ int read_args(int argc, char **argv, User *user)
       strcpy(flag,"streamID");
       //str_to_IP_PORT(ptr, user->stream_name, user->stream_addr, user->stream_port, flag);
       //if(strcmp(flag,"BAD_ID") == 0) return 0;
-      if(sscanf(ptr, "%[^:]:%[^:]:%s%n", user->stream_name, user->stream_addr, user->stream_port, &n)==3)
+      if(sscanf(ptr, "%[^:]:%[^:]:%s%n", user->stream_name, user->stream_addr, user->stream_port, &n)!=3)
       {
-        printf("%s\n", user->stream_name);
-        printf("%s\n", user->stream_addr);
-        printf("%s\n", user->stream_port);
-      }else{
         printf("BAD STREAM ID\n");
         return 0;
       }
