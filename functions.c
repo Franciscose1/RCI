@@ -260,29 +260,30 @@ int handle_ASmessage(char *msg, User *user)
 
 int handle_STDINmessage(char *msg, User *user)
 {
-	
-	char *buffer[128];
-	 strcpy(buffer,msg);
+
+	char buffer[128] = {'\0'};
+
+	strcpy(buffer,msg);
 	if(strcmp(buffer,"streams\n")==0)
-     { 
+     {
 		strcpy(msg,"DUMP\n");
 		reach_udp(user->rsaddr,user->rsport,msg);
      }
 	if(strcmp(buffer,"status\n")==0)
-	{ 
+	{
 		//identificação do stream;
 		printf("Stream name: %s /n",user->stream_name);
 		//indicação se o stream está interrompido;
-		
+
 		//indicação se a aplicação é raiz da árvore de escoamento;
 		if(user->state==access_server)
 			//stdout
-			
+
 		//endereço IP e porto UDP do servidor de acesso, se for raiz;
 		if(user->state==access_server)
 		{
-			
-			}
+
+		}
 		//endereço IP e porto TCP do ponto de acesso onde está ligado (a montante), se não for raiz;
 		//endereço IP e porto TCP do ponto de acesso disponibilizado;
 		//número de sessões TCP suportadas a jusante e indicação de quantas se encontram ocupadas;
@@ -293,18 +294,18 @@ int handle_STDINmessage(char *msg, User *user)
 		user->display = ON;
 	if(strcmp(buffer,"display off\n")==0)
 		user->display = OFF;
-		
+
 	if(strcmp(buffer,"debug on\n")==0)
-	{ 
-		
+	{
+
 	}
 	if(strcmp(buffer,"debug off\n")==0)
-	{ 
+	{
 
 
 	}
 	if(strcmp(buffer,"tree\n")==0)
-	{ 
+	{
 
 	}
 	if(strcmp(buffer,"root_out\n")==0) //Passar para exit
@@ -319,8 +320,5 @@ int handle_STDINmessage(char *msg, User *user)
 		return(0);
 	}
 
-	
-	
 return 1;
 }
-

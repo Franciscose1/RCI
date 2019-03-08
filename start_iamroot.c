@@ -123,7 +123,6 @@ int main(int argc, char **argv)
           n-=nw; ptr+=nw;
         }
       }else{
-        //This close crashes select because it tries to set it again
         close(user->fd_tcp_mont);
         user->state = out;
       }
@@ -131,16 +130,16 @@ int main(int argc, char **argv)
     if(FD_ISSET(STDIN_FILENO,&rfds))   //STDIN
     {
       fgets(buffer, sizeof(buffer), stdin);
-      
+
       if(handle_STDINmessage(buffer,user)==0)
       {
-			close(newfd);
-			exit(2);
-		}
+        close(newfd);
+		    exit(2);
+		  }
       nread = strlen(buffer);
-      
-      
-     
+
+
+
     }
 
 
@@ -150,3 +149,5 @@ int main(int argc, char **argv)
 
 //Pedro's PC
 //./iamroot grupo44:193.136.138.142:58001 -i 192.168.1.67 -u 58001 -t 58001
+//@tecnico
+//./iamroot grupo44:193.136.138.142:58001 -i 194.210.159.193 -u 58001 -t 58001
