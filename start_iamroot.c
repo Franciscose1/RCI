@@ -132,7 +132,11 @@ int main(int argc, char **argv)
     {
       fgets(buffer, sizeof(buffer), stdin);
       
-      handle_STDINmessage(buffer,user);
+      if(handle_STDINmessage(buffer,user)==0)
+      {
+			close(newfd);
+			exit(2);
+		}
       nread = strlen(buffer);
       
       

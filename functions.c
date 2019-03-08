@@ -260,8 +260,9 @@ int handle_ASmessage(char *msg, User *user)
 
 int handle_STDINmessage(char *msg, User *user)
 {
-	char *ptr;
-	BUFFER = msg;
+	
+	char *buffer[128];
+	 buffer=msg;
 	if(strcmp(buffer,"streams\n")==0)
      { 
 		strcpy(msg,"DUMP\n");
@@ -270,7 +271,7 @@ int handle_STDINmessage(char *msg, User *user)
 	if(strcmp(buffer,"status\n")==0)
 	{ 
 		//identificação do stream;
-		user->stream_name
+		printf("Stream name: %s /n",user->stream_name);
 		//indicação se o stream está interrompido;
 		
 		//indicação se a aplicação é raiz da árvore de escoamento;
@@ -300,6 +301,7 @@ int handle_STDINmessage(char *msg, User *user)
 	if(strcmp(buffer,"debug off\n")==0)
 	{ 
 
+
 	}
 	if(strcmp(buffer,"tree\n")==0)
 	{ 
@@ -313,8 +315,8 @@ int handle_STDINmessage(char *msg, User *user)
 		close(user->fd_udp_serv);
 		close(user->fd_tcp_serv);
 		close(user->fd_tcp_mont);
-		close(newfd);
-		exit(1);
+		//close(newfd);
+		return(0);
 	}
 
 	
