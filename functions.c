@@ -270,47 +270,40 @@ int handle_STDINmessage(char *msg, User *user)
 		reach_udp(user->rsaddr,user->rsport,msg);
      }
 	if(strcmp(buffer,"status\n")==0)
-	{ 
-								//identificação do stream;
-		printf("Stream name: %s /n",user->stream_name);
-								//indicação se o stream está interrompido;
+	{ 							
+		printf("Stream name: %s /n",user->stream_name); //identificação do stream;
+		//indicação se o stream está interrompido;
 		//Fazer depois, possivelmente adicionar  ao user
 		
-								//indicação se a aplicação é raiz da árvore de escoamento;
-		if(user->state==access_server)
-			printf("You are the root /n");
-			
-								//endereço IP e porto UDP do servidor de acesso, se for raiz;
+								
 		if(user->state==access_server)
 		{
-			
-			
-			}
-		//endereço IP e porto TCP do ponto de acesso onde está ligado (a montante), se não for raiz;
-		//endereço IP e porto TCP do ponto de acesso disponibilizado;
-		//número de sessões TCP suportadas a jusante e indicação de quantas se encontram ocupadas;
-		//endereço IP e porto TCP dos pontos de acesso dos pares imediatamente a jusante.
-
+			printf("You are the root /n");//indicação se a aplicação é raiz da árvore de escoamento;					
+			printf("IP and port of Acess server:%s : %s/n",user->ipaddr,user->uport);//endereço IP e porto UDP do servidor de acesso, se for raiz;
+		}						
+		if(user->state==in)
+		{
+			printf("IP and port of Root a montante:%s : %s/n",user->stream_addr,user->stream_port);//endereço IP e porto TCP do ponto de acesso onde está ligado (a montante), se não for raiz;
+			printf("IP and port of Acess server:%s : %s/n",user->ipaddr,user->tport);//endereço IP e porto TCP do ponto de acesso disponibilizado;				
+			printf("Max number of clients:%d/n",user->tcpsessions);//mero de sessões TCP suportadas a jusante e indicação de quantas se encontram ocupadas;				
+		}
+					//endereço IP e porto TCP dos pontos de acesso dos pares imediatamente a jusante.
+					
 	}
 	if(strcmp(buffer,"display on\n")==0)
 		user->display = ON;
 	if(strcmp(buffer,"display off\n")==0)
 		user->display = OFF;
-
 	if(strcmp(buffer,"debug on\n")==0)
-	{
-
-	}
+		user->detailed_info = ON;
 	if(strcmp(buffer,"debug off\n")==0)
-	{
-
-
-	}
+		user->detailed_info = OFF;
 	if(strcmp(buffer,"tree\n")==0)
 	{
+		//tree query
 
 	}
-	if(strcmp(buffer,"exit\n")==0) //Passar para exit
+	if(strcmp(buffer,"exit\n")==0) 
 	{
 		msg_in_protocol(msg,"REMOVE",user);
 		send_udp(user->rsaddr,user->rsport,msg);
@@ -318,7 +311,6 @@ int handle_STDINmessage(char *msg, User *user)
 		close(user->fd_udp_serv);
 		close(user->fd_tcp_serv);
 		close(user->fd_tcp_mont);
-		//close(newfd);
 		return(0);
 	}
 
