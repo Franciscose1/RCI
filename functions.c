@@ -262,7 +262,7 @@ int handle_STDINmessage(char *msg, User *user)
 {
 	
 	char *buffer[128];
-	 buffer=msg;
+	 strcpy(buffer,msg);
 	if(strcmp(buffer,"streams\n")==0)
      { 
 		strcpy(msg,"DUMP\n");
