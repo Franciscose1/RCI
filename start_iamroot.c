@@ -66,7 +66,7 @@ int main(int argc, char **argv)
     //Set UDP server if program is the access server for the stream
     if(user->state == access_server)
     {
-      FD_SET(user->fd_udp_serv,&rfds);maxfd=max(maxfd,user->fd_udp_serv);
+      FD_SET(user->fd_udp_serv,&rfds);maxfd=max(maxfd,user->fd_udp_serv);  //Servidor de Acesso
     }
     //Set TCP server if program is in the tree
     if((user->state == in)||(user->state == access_server))
@@ -82,7 +82,8 @@ int main(int argc, char **argv)
     counter=select(maxfd+1,&rfds,(fd_set*)NULL,(fd_set*)NULL,(struct timeval *)NULL);
     if(counter<=0){printf("Counter <= 0\n");exit(1);}
 
-    if(FD_ISSET(user->fd_udp_serv,&rfds) && user->state == access_server)
+
+    if(FD_ISSET(user->fd_udp_serv,&rfds) && user->state == access_server) //Servidor de Acesso
     {
       addrlen=sizeof(addr);
       nread=recvfrom(user->fd_udp_serv,buffer,128,0,(struct sockaddr*)&addr,&addrlen);
@@ -95,7 +96,7 @@ int main(int argc, char **argv)
       n=sendto(user->fd_udp_serv,buffer,nread,0,(struct sockaddr*)&addr,addrlen);
       if(n==-1)/*error*/exit(1);
     }
-    if(FD_ISSET(user->fd_tcp_serv,&rfds) && user->state != waiting)
+    if(FD_ISSET(user->fd_tcp_serv,&rfds) && user->state != waiting) //Clientes/Abaixo
     {
       if((newfd=accept(user->fd_tcp_serv,(struct sockaddr*)&addr,&addrlen))==-1)
       {
@@ -110,7 +111,7 @@ int main(int argc, char **argv)
         n-=nw; ptr+=nw;
       }
     }
-    if(FD_ISSET(user->fd_tcp_mont,&rfds))
+    if(FD_ISSET(user->fd_tcp_mont,&rfds))     //Fonte/Acima
     {
       if((n=read(user->fd_tcp_mont,buffer,128))!=0)
       {
@@ -127,24 +128,15 @@ int main(int argc, char **argv)
         user->state = out;
       }
     }
-    if(FD_ISSET(STDIN_FILENO,&rfds))
+    if(FD_ISSET(STDIN_FILENO,&rfds))   //STDIN
     {
       fgets(buffer, sizeof(buffer), stdin);
-      if(strcmp(buffer,"root_out\n")==0)
-      {
-        if(user->state == access_server)
-        {
-          msg_in_protocol(msg,"REMOVE",user);
-          send_udp(user->rsaddr,user->rsport,msg);
-        }
-        close(newfd);
-        close(user->fd_udp_serv);
-        close(user->fd_tcp_serv);
-        close(user->fd_tcp_mont);
-
-        printf("EXIT SUCCESSFULL\n");
-        exit(0);
-      }
+      
+      handle_STDINmessage(buffer,user);
+      nread = strlen(buffer);
+      
+      
+     
     }
 
 
