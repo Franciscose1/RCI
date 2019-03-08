@@ -270,17 +270,19 @@ int handle_STDINmessage(char *msg, User *user)
      }
 	if(strcmp(buffer,"status\n")==0)
 	{ 
-		//identificação do stream;
+								//identificação do stream;
 		printf("Stream name: %s /n",user->stream_name);
-		//indicação se o stream está interrompido;
+								//indicação se o stream está interrompido;
+		//Fazer depois, possivelmente adicionar  ao user
 		
-		//indicação se a aplicação é raiz da árvore de escoamento;
+								//indicação se a aplicação é raiz da árvore de escoamento;
 		if(user->state==access_server)
-			//stdout
+			printf("You are the root /n");
 			
-		//endereço IP e porto UDP do servidor de acesso, se for raiz;
+								//endereço IP e porto UDP do servidor de acesso, se for raiz;
 		if(user->state==access_server)
 		{
+			
 			
 			}
 		//endereço IP e porto TCP do ponto de acesso onde está ligado (a montante), se não for raiz;
@@ -307,7 +309,7 @@ int handle_STDINmessage(char *msg, User *user)
 	{ 
 
 	}
-	if(strcmp(buffer,"root_out\n")==0) //Passar para exit
+	if(strcmp(buffer,"exit\n")==0) //Passar para exit
 	{
 		msg_in_protocol(msg,"REMOVE",user);
 		send_udp(user->rsaddr,user->rsport,msg);
