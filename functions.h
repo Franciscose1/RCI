@@ -13,8 +13,8 @@ struct USER{
   char stream_addr[128];
   char stream_port[128];
   char ipaddr[128];
-  char tport[128];
-  char uport[128];
+  char tport[128]; //Clientes
+  char uport[128]; //Servidor de acesso
   char rsaddr[128];
   char rsport[128];
   int tcpsessions;
