@@ -2,6 +2,7 @@
 #include "udp.h"
 #include "tcp.h"
 
+//String handling
 int str_to_msgID(char *ptr, char *msgID)
 {
   int n = 0, ncount = 0;
@@ -55,6 +56,7 @@ int str_to_streamID(char *ptr, char *stream_name, char *ipaddr, char *port)
   return ncount;
 }
 
+//Setup do programa
 void USER_init(User *user)
 {
   strncpy(user->stream_name,"\0",sizeof(user->stream_name)-1);
@@ -84,27 +86,25 @@ int read_args(int argc, char **argv, User *user) //Precisa defesa contra opção
     {
       argcount++;
       strncpy(user->ipaddr,argv[argcount],sizeof(user->ipaddr)-1);
-      //printf("%s\n", user->ipaddr);
     }else if(strcmp(argv[argcount],"-t") == 0)
     {
       argcount++;
       strncpy(user->tport,argv[argcount],sizeof(user->tport)-1);
-      //printf("%s\n", user->tport);
     }else if(strcmp(argv[argcount],"-u") == 0)
     {
       argcount++;
       strncpy(user->uport,argv[argcount],sizeof(user->uport)-1);
-      //printf("%s\n", user->uport);
     }else if(strcmp(argv[argcount],"-s") == 0)
     {
       argcount++;
       ptr = argv[argcount];
-
+      //IP do root server
       if(sscanf(ptr, "%[^:]%n", user->rsaddr, &n)!=1)
       {
         printf("unable to read root server IP\n");
         return 0;
       }
+      //Verificar se foi também especificado o porto do root server
       ptr += n;
       if(*ptr == ':')
       {
@@ -115,13 +115,10 @@ int read_args(int argc, char **argv, User *user) //Precisa defesa contra opção
           return 0;
         }
       }
-
-      printf("addr:%s port:%s\n", user->rsaddr, user->rsport);
     }else if(strcmp(argv[argcount],"-p") == 0)
     {
       argcount++;
       user->tcpsessions = atoi(argv[argcount]);
-      //printf("%d\n", user->tcpsessions);
     }else if(strcmp(argv[argcount],"-n") == 0)
     {
       argcount++;
@@ -146,9 +143,14 @@ int read_args(int argc, char **argv, User *user) //Precisa defesa contra opção
     }
   }
   if(strcmp(user->stream_name,"") == 0) return 0; //No stream specified
-  else return 1;
+
+  user->fd_clients = (int *)malloc(sizeof(int)*(user->bestpops)); //Array com bestpops file descriptors para os jusantes
+  memset(user->fd_clients, 0, sizeof (int)*user->bestpops);
+
+  return 1;
 }
 
+//Implementação do protocolo de comunicação
 void msg_in_protocol(char *msg, char *label, User *user)
 {
   if(strcmp(label,"WHOISROOT")==0)
@@ -265,30 +267,30 @@ int handle_STDINmessage(char *msg, User *user)
 
 	strcpy(buffer,msg);
 	if(strcmp(buffer,"streams\n")==0)
-     {
+  {
 		strcpy(msg,"DUMP\n");
 		reach_udp(user->rsaddr,user->rsport,msg);
-     }
+  }
 	if(strcmp(buffer,"status\n")==0)
-	{ 							
+	{
 		printf("Stream name: %s /n",user->stream_name); //identificação do stream;
 		//indicação se o stream está interrompido;
 		//Fazer depois, possivelmente adicionar  ao user
-		
-								
+
+
 		if(user->state==access_server)
 		{
-			printf("You are the root /n");//indicação se a aplicação é raiz da árvore de escoamento;					
+			printf("You are the root /n");//indicação se a aplicação é raiz da árvore de escoamento;
 			printf("IP and port of Acess server:%s : %s/n",user->ipaddr,user->uport);//endereço IP e porto UDP do servidor de acesso, se for raiz;
-		}						
+		}
 		if(user->state==in)
 		{
 			printf("IP and port of Root a montante:%s : %s/n",user->stream_addr,user->stream_port);//endereço IP e porto TCP do ponto de acesso onde está ligado (a montante), se não for raiz;
-			printf("IP and port of Acess server:%s : %s/n",user->ipaddr,user->tport);//endereço IP e porto TCP do ponto de acesso disponibilizado;				
-			printf("Max number of clients:%d/n",user->tcpsessions);//mero de sessões TCP suportadas a jusante e indicação de quantas se encontram ocupadas;				
+			printf("IP and port of Acess server:%s : %s/n",user->ipaddr,user->tport);//endereço IP e porto TCP do ponto de acesso disponibilizado;
+			printf("Max number of clients:%d/n",user->tcpsessions);//mero de sessões TCP suportadas a jusante e indicação de quantas se encontram ocupadas;
 		}
 					//endereço IP e porto TCP dos pontos de acesso dos pares imediatamente a jusante.
-					
+
 	}
 	if(strcmp(buffer,"display on\n")==0)
 		user->display = ON;
@@ -303,7 +305,7 @@ int handle_STDINmessage(char *msg, User *user)
 		//tree query
 
 	}
-	if(strcmp(buffer,"exit\n")==0) 
+	if(strcmp(buffer,"exit\n")==0)
 	{
 		msg_in_protocol(msg,"REMOVE",user);
 		send_udp(user->rsaddr,user->rsport,msg);
@@ -311,8 +313,39 @@ int handle_STDINmessage(char *msg, User *user)
 		close(user->fd_udp_serv);
 		close(user->fd_tcp_serv);
 		close(user->fd_tcp_mont);
+    free(user->fd_clients);
 		return(0);
 	}
 
 return 1;
+}
+
+//Mecanismo de adesão à árvore
+int join_tree(User *user)
+{
+  char msg[128] = {'\0'};
+
+  //Pergunta ao servidor de raizes acerca de um servidor de acesso
+  msg_in_protocol(msg,"WHOISROOT",user);
+  reach_udp(user->rsaddr,user->rsport,msg);
+
+  //Processa resposta do root server
+  if(handle_RSmessage(msg, user) == 0)
+  {
+    printf("Could not process response from root_server\n");
+    return 0;
+  }
+
+  //Há um servidor de acesso para o stream escolhido?
+  if(user->state == waiting) //Estado 'waiting' enquanto não recebe um "WELCOME" a confirmar adesão à árvore
+  {
+    //Processa resposta do servidor de acesso
+    if(handle_ASmessage(msg, user) == 0)
+    {
+      printf("Could not process response from access_server\n");
+      return 0;
+    }
+  }
+
+  return 1;
 }

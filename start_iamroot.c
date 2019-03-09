@@ -6,7 +6,7 @@
 int main(int argc, char **argv)
 {
   int maxfd, counter;
-  char buffer[128] = {'\0'}, msg[128] = {'\0'};
+  char buffer[128] = {'\0'};//, msg[128] = {'\0'};
   fd_set rfds;
   struct sockaddr_in addr;
   int n,nread,nw;
@@ -24,8 +24,8 @@ int main(int argc, char **argv)
   if(read_args(argc, argv, user)==0)
   {
     //Apresenta lista de streams disponiveis caso nenhum tenha sido especificado
-    strcpy(msg,"DUMP\n");
-    reach_udp(user->rsaddr,user->rsport,msg);
+    strcpy(buffer,"DUMP\n");
+    reach_udp(user->rsaddr,user->rsport,buffer);
     return 0;
   }
 
@@ -41,26 +41,10 @@ int main(int argc, char **argv)
     //Procedimento para aceder ao stream
     if(user->state == out)
     {
-      //Pergunta ao servidor de raizes acerca de um servidor de acesso
-      msg_in_protocol(msg,"WHOISROOT",user);
-      reach_udp(user->rsaddr,user->rsport,msg); //Sends and waits for answer
-
-      //Process response from root server
-      if(handle_RSmessage(msg, user) == 0)
+      if(join_tree(user) == 0)
       {
-        printf("Could not process response from root_server\n");
-        return 0;
-      }
-
-      //There was an access server for the stream
-      if(user->state == waiting) //waiting state until 'welcome' is recieved
-      {
-        //Process response from access server
-        if(handle_ASmessage(msg, user) == 0)
-        {
-          printf("Could not process response from access_server\n");
-          return 0;
-        }
+        printf("Unable to reach stream service tree\n");
+        exit(1);
       }
     }
     //Set UDP server if program is the access server for the stream
@@ -102,7 +86,19 @@ int main(int argc, char **argv)
       {
         printf("error: accept\n");
         exit(1);
+        //state = out; continue;
       }
+      for(n=0; n < user->bestpops; n++) //Guarda descritor para comunicar com jusante caso haja espaço
+      {
+        if(user->fd_clients[n] == 0)
+        {
+          user->fd_clients[n] = newfd;
+          //Send WELCOME
+          break;
+        }
+      }
+      if(n == user->bestpops) //Send REDIRECT
+
       ptr = strcpy(buffer,"I SEE YOU\n");
       n = strlen("I SEE YOU\n");
       while(n>0)
@@ -137,12 +133,7 @@ int main(int argc, char **argv)
 		    exit(2);
 		  }
       nread = strlen(buffer);
-
-
-
     }
-
-
   }//while(1)
 
 }

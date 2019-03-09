@@ -24,19 +24,24 @@ struct USER{
   int detailed_info;
   int synopse;
   enum {access_server,out,in,waiting} state;
-  int fd_udp_serv, fd_tcp_serv, fd_tcp_mont;
+  int fd_udp_serv, fd_tcp_serv, fd_tcp_mont, *fd_clients;
 };
 
 typedef struct USER User;
 
-//void str_to_IP_PORT(char *);
+//String handling
+int str_to_msgID(char *, char *);
 int str_to_IP_PORT(char *, char *, char *);
 int str_to_streamID(char *, char *, char *, char *);
+//Setup do programa
 void USER_init(User *);
 int read_args(int, char **, User *);
+//Implementação do protocolo de comunicação
 void msg_in_protocol(char *, char *, User *);
 int handle_RSmessage(char *, User *);
 int handle_ASmessage(char *, User *);
 int handle_STDINmessage(char *, User *);
+//Mecanismo de adesão à árvore
+int join_tree(User *);
 
 #endif
