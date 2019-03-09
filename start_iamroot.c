@@ -6,10 +6,10 @@
 int main(int argc, char **argv)
 {
   int maxfd, counter;
-  char buffer[128] = {'\0'};//, msg[128] = {'\0'};
+  char buffer[128] = {'\0'};
   fd_set rfds;
   struct sockaddr_in addr;
-  int n,nread,nw;
+  int n,nw;
   unsigned int addrlen;
   int newfd;
   char *ptr;
@@ -69,16 +69,7 @@ int main(int argc, char **argv)
 
     if(FD_ISSET(user->fd_udp_serv,&rfds) && user->state == access_server) //Servidor de Acesso
     {
-      addrlen=sizeof(addr);
-      nread=recvfrom(user->fd_udp_serv,buffer,128,0,(struct sockaddr*)&addr,&addrlen);
-      if(nread==-1)/*error*/exit(1);
-
-      write(1,buffer,nread);
-      handle_ASmessage(buffer,user);
-
-      nread = strlen(buffer);
-      n=sendto(user->fd_udp_serv,buffer,nread,0,(struct sockaddr*)&addr,addrlen);
-      if(n==-1)/*error*/exit(1);
+      recieveNsend_udp(user->fd_udp_serv, buffer, user);
     }
     if(FD_ISSET(user->fd_tcp_serv,&rfds) && user->state != waiting) //Clientes/Abaixo
     {
@@ -86,7 +77,6 @@ int main(int argc, char **argv)
       {
         printf("error: accept\n");
         exit(1);
-        //state = out; continue;
       }
       for(n=0; n < user->bestpops; n++) //Guarda descritor para comunicar com jusante caso haja espaço
       {
@@ -97,7 +87,7 @@ int main(int argc, char **argv)
           break;
         }
       }
-      if(n == user->bestpops) //Send REDIRECT
+      if(n == user->bestpops) {} //Send Redirect
 
       ptr = strcpy(buffer,"I SEE YOU\n");
       n = strlen("I SEE YOU\n");
@@ -132,7 +122,7 @@ int main(int argc, char **argv)
         close(newfd);
 		    exit(2);
 		  }
-      nread = strlen(buffer);
+      n = strlen(buffer);
     }
   }//while(1)
 

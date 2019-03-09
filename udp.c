@@ -88,7 +88,7 @@ int send_udp(char *ip, char *port, char *msg)
   return fd;
 }
 
-void recieve_udp(int fd, char *msg)
+void recieveNsend_udp(int fd, char *msg, User *user)
 {
   struct sockaddr_in addr;
   int n, errcode;
@@ -106,10 +106,19 @@ void recieve_udp(int fd, char *msg)
   strcpy(msg,buffer);
   write(1,buffer,n);
 
+  //Mostra quem mandou (não é pedido)
   if((errcode=getnameinfo((struct sockaddr *)&addr,addrlen,host,sizeof host,service,sizeof service,0))!=0)
     fprintf(stderr,"error: getnameinfo: %s\n",gai_strerror(errcode));
   else
     printf("Sent by [%s:%s]\n",host,service);
+
+  //Processa o pedido feito ao servidor de acesso
+  handle_ASmessage(buffer,user);
+
+  //Responde de acordo
+  n = strlen(buffer);
+  n=sendto(fd,buffer,n,0,(struct sockaddr*)&addr,addrlen);
+  if(n==-1)/*error*/exit(1); //Exit se falhar, tem de ser mudado
 }
 
 int serv_udp(char *port)

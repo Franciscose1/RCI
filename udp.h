@@ -12,7 +12,7 @@
 
 void reach_udp(char *, char *, char *);
 int send_udp(char *, char *, char *);
-void recieve_udp(int, char *);
+void recieveNsend_udp(int , char *, User *);
 int serv_udp(char *);
 
 #endif

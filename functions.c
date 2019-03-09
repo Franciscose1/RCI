@@ -229,40 +229,30 @@ int handle_ASmessage(char *msg, User *user)
 
   if(strcmp(msgID,"POPRESP")==0)
   {
-    if(sscanf(ptr, "%[^:]:%[^:]:%s%n", stream_name, ipaddr, port, &n)!=3)
-    {
-      printf("BAD STREAM ID\n");
-      return 0;
-    }
+    ptr += str_to_streamID(ptr, stream_name, ipaddr, port);
     if((strcmp(stream_name,user->stream_name)!=0)||(strcmp(ipaddr,user->stream_addr)!=0)||(strcmp(port,user->stream_port)!=0))
     {
       printf("Incompatible stream\n");
       return 0;
       //strcpy(flag,"BAD_ID");
     }
-    ptr += n;
-    ptr++;
-    if(sscanf(ptr, "%[^:]:%s%n", ipaddr, port, &n)!=2)
-    {
-      printf("ip/port\n");
-      return 0;
-    }
+    str_to_IP_PORT(ptr, ipaddr, port);
+
     user->fd_tcp_mont = reach_tcp(ipaddr,port);
-    user->state = waiting;
+    user->state = waiting; //Ainda não defende contra IPs fantasma
   }else if(strcmp(msgID,"POPREQ")==0)
   {
     //BATOTA, ta a mandar o seu POP
     snprintf(msg, 128, "POPRESP %s:%s:%s %s:%s\n",
     user->stream_name, user->stream_addr, user->stream_port, user->ipaddr, user->tport);
-    return 1;
-  }else return 0;
+  }else{printf("AS Message not in protocol\n"); return 0;}
 
   return 1;
 }
 
 int handle_STDINmessage(char *msg, User *user)
 {
-
+  int n = 0;
 	char buffer[128] = {'\0'};
 
 	strcpy(buffer,msg);
@@ -310,6 +300,14 @@ int handle_STDINmessage(char *msg, User *user)
 		msg_in_protocol(msg,"REMOVE",user);
 		send_udp(user->rsaddr,user->rsport,msg);
 		printf("EXIT SUCCESSFULL\n");
+    while(n < user->bestpops)
+    {
+      if(user->fd_clients[n] != 0)
+      {
+        close(user->fd_clients[n]);
+      }
+      n++;
+    }
 		close(user->fd_udp_serv);
 		close(user->fd_tcp_serv);
 		close(user->fd_tcp_mont);
