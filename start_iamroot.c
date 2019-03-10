@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 
   while(1)
   {
-    //Reinicia os vetor de file descriptors
+    //Reinicia o vetor de file descriptors
     FD_ZERO(&rfds);
     FD_SET(STDIN_FILENO,&rfds); maxfd = 0; //Sets stdin file descriptor
 

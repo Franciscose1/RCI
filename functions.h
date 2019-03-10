@@ -9,8 +9,10 @@
 #define max(A,B) ((A)>=(B)?(A):(B))
 
 struct USER{
+	//IP do a montante
+	//IP dos clientes atraves da resposta do welcome(new_pop)
   char stream_name[128];
-  char stream_addr[128];
+  char stream_addr[128];//Fonte
   char stream_port[128];
   char ipaddr[128];
   char tport[128]; //Clientes
