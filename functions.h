@@ -25,6 +25,7 @@ struct USER{
   int synopse;
   enum {access_server,out,in,waiting} state;
   int fd_udp_serv, fd_tcp_serv, fd_tcp_mont, *fd_clients;
+  char **myClients;
 };
 
 typedef struct USER User;
@@ -41,6 +42,7 @@ void msg_in_protocol(char *, char *, User *);
 int handle_RSmessage(char *, User *);
 int handle_ASmessage(char *, User *);
 int handle_STDINmessage(char *, User *);
+int handle_PEERmessage(char *, User *);
 //Mecanismo de adesão à árvore
 int join_tree(User *);
 
