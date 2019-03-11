@@ -64,7 +64,7 @@ int main(int argc, char **argv)
     if((user->state == in)||(user->state == access_server))
     {
       FD_SET(user->fd_tcp_serv,&rfds);maxfd=max(maxfd,user->fd_tcp_serv);
-      for(i=0;i<user->bestpops;i++)
+      for(i=0;i<user->tcpsessions;i++)
       {
         FD_SET(user->fd_clients[i],&rfds);maxfd=max(maxfd,user->fd_clients[i]);
       }
@@ -86,7 +86,7 @@ int main(int argc, char **argv)
         printf("error: accept\n");
         exit(1);
       }
-      for(n=0; n < user->bestpops; n++) //Guarda descritor para comunicar com jusante caso haja espaço
+      for(n=0; n < user->tcpsessions; n++) //Guarda descritor para comunicar com jusante caso haja espaço
       {
         if(user->fd_clients[n] == 0)
         {
@@ -98,7 +98,7 @@ int main(int argc, char **argv)
           break;
         }
       }
-      if(n == user->bestpops)
+      if(n == user->tcpsessions)
       {
         //Send Redirect
         msg_in_protocol(buffer,"REDIRECT",user);
@@ -119,7 +119,7 @@ int main(int argc, char **argv)
         user->state = out;
       }
     }
-    for(i=0;i<user->bestpops;i++)
+    for(i=0;i<user->tcpsessions;i++)
     {
       if(FD_ISSET(user->fd_clients[i],&rfds) && user->fd_clients[i] != 0)
       {

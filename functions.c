@@ -144,11 +144,11 @@ int read_args(int argc, char **argv, User *user) //Precisa defesa contra opção
   }
   if(strcmp(user->stream_name,"") == 0) return 0; //No stream specified
 
-  user->fd_clients = (int *)malloc(sizeof(int)*(user->bestpops)); //Array com bestpops file descriptors para os jusantes
-  memset(user->fd_clients, 0, sizeof(int)*user->bestpops);
+  user->fd_clients = (int *)malloc(sizeof(int)*(user->tcpsessions)); //Array com tcpsessions file descriptors para os jusantes
+  memset(user->fd_clients, 0, sizeof(int)*user->tcpsessions);
 
-  user->myClients = malloc(sizeof(char*)*(user->bestpops));
-  for (int n = 0; n < user->bestpops; n++)
+  user->myClients = malloc(sizeof(char*)*(user->tcpsessions));
+  for (int n = 0; n < user->tcpsessions; n++)
   {
     user->myClients[n] = malloc(128*sizeof(char));
     memset(user->myClients[n],'\0',128);
@@ -324,7 +324,7 @@ int handle_STDINmessage(char *msg, User *user)
       msg_in_protocol(msg,"REMOVE",user);
   		send_udp(user->rsaddr,user->rsport,msg);
     }
-    while(n < user->bestpops)
+    while(n < user->tcpsessions)
     {
       if(user->fd_clients[n] != 0)
       {
