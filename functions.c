@@ -196,10 +196,14 @@ void msg_in_protocol(char *msg, char *label, User *user)
     snprintf(msg, 128, "NP %s:%s\n", user->ipaddr, user->tport);
     return;
   }
+  if(strcmp(label,"DA")==0)
+  {
+    snprintf(msg, 128, "DA\n");
+  }
 
 }
 
-int handle_RSmessage(char *msg, User *user)
+int handle_RSmessage(char *msg, User *user) //Servidor de Raizes
 {
 
   char *ptr;
@@ -240,7 +244,7 @@ int handle_RSmessage(char *msg, User *user)
   return 1;
 }
 
-int handle_ASmessage(char *msg, User *user)
+int handle_ASmessage(char *msg, User *user) //Servidor de Acesso
 {
   char *ptr;
   char msgID[128] = {'\0'};
@@ -273,7 +277,89 @@ int handle_ASmessage(char *msg, User *user)
   return 1;
 }
 
-int handle_STDINmessage(char *msg, User *user)
+int handle_R2Rmessage(char *msg, User *user) //iamroot to iamroot
+{
+  int nbytes,nw;
+  char *ptr;
+  char msgID[128] = {'\0'};
+	
+  char buffer[128] = {'\0'};
+
+  ptr = msg;
+  ptr += str_to_msgID(ptr,msgID);
+  
+  if(user->state==access_server)//Caso seja o root, recebe da fonte em formato fora do protocolo
+	{
+		if((nbytes=read(user->fd_tcp_mont,buffer,128))!=0)
+      {
+        if(nbytes==-1){printf("error: read\n"); exit(1);}
+		ptr=&buffer[0];
+        while(nbytes>0)
+        {
+          if((nw=write(1,ptr,nbytes))<=0){printf("error: write\n"); exit(1);}
+          nbytes-=nw; ptr+=nw;
+        }
+        //Transforma em modo protocolo
+        char *msg = (char *)malloc(nbytes);
+        int total_enviado=0;
+		while(total_enviado<count2){
+			nbytes = write(clipboard_id, msg+total_enviado, count2-total_enviado);
+			if(nbytes==-1){ 
+				perror("Write: ");
+				return(0);
+			}
+		
+			total_enviado+=nbytes;
+		}
+	free(msg);	
+        
+	}
+  if(strcmp(msgID,"DA")==0)
+  {
+		//Ler o tamanho do pacote <nbytes></n><DATA>
+		//Recebe o pacote
+		char *msg = (char *)malloc(nbytes);
+		total_recebido=0;
+		while(total_recebido<size_msg2){
+			nbytes = read(client_fd, msg+total_recebido, size_msg2-total_recebido);
+			if(nbytes==-1){ 
+				perror("read: ");
+				close(client_fd);
+				free(recebe);
+				free(msg);
+				return(0);
+			}			
+			total_recebido+=nbytes;
+		}
+		//Imprime no ecra
+		
+		//Envia para os que estão abaixo
+		int count2=count;												
+		void *msg = (void *)malloc(count2);
+		memcpy(msg,buf,count2);
+	
+		int total_enviado=0;
+		while(total_enviado<count2){
+			nbytes = write(clipboard_id, msg+total_enviado, count2-total_enviado);
+			if(nbytes==-1){ 
+				perror("Write: ");
+				return(0);
+			}
+		
+			total_enviado+=nbytes;
+		}
+	free(msg);	
+		
+		
+	  free(msg);
+	  
+  }
+
+  return 1;
+}
+
+
+int handle_STDINmessage(char *msg, User *user) //STDIN
 {
   int n = 0;
 	char buffer[128] = {'\0'};
@@ -298,6 +384,7 @@ int handle_STDINmessage(char *msg, User *user)
 		}
 		if(user->state==in)
 		{
+			//Isto está errado.
 			printf("IP and port of Root a montante:%s : %s/n",user->stream_addr,user->stream_port);//endereço IP e porto TCP do ponto de acesso onde está ligado (a montante), se não for raiz;
 			printf("IP and port of Acess server:%s : %s/n",user->ipaddr,user->tport);//endereço IP e porto TCP do ponto de acesso disponibilizado;
 			printf("Max number of clients:%d/n",user->tcpsessions);//mero de sessões TCP suportadas a jusante e indicação de quantas se encontram ocupadas;

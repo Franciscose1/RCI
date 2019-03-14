@@ -34,6 +34,7 @@ int main(int argc, char **argv)
 
   while(1)
   {
+
     //Reinicia o buffer
     memset(buffer,'\0',sizeof(buffer));
 

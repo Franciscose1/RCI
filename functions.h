@@ -10,8 +10,10 @@
 #define max(A,B) ((A)>=(B)?(A):(B))
 
 struct USER{
+	//IP do a montante
+	//IP dos clientes atraves da resposta do welcome(new_pop)
   char stream_name[128];
-  char stream_addr[128];
+  char stream_addr[128];//Fonte
   char stream_port[128];
   char ipaddr[128];
   char tport[128]; //Clientes
@@ -44,7 +46,9 @@ void msg_in_protocol(char *, char *, User *);
 int handle_RSmessage(char *, User *);
 int handle_ASmessage(char *, User *);
 int handle_STDINmessage(char *, User *);
+int handle_R2Rmessage(char *msg, User *user);
 int handle_PEERmessage(char *, User *);
+
 //Mecanismo de adesão à árvore
 int join_tree(User *);
 
