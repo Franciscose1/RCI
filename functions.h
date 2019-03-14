@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "querylist.h"
 #define ON 1
 #define OFF 0
 #define max(A,B) ((A)>=(B)?(A):(B))
@@ -26,6 +27,7 @@ struct USER{
   enum {access_server,out,in,waiting} state;
   int fd_udp_serv, fd_tcp_serv, fd_tcp_mont, *fd_clients;
   char **myClients;
+  QueryList *ql;
 };
 
 typedef struct USER User;

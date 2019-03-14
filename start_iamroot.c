@@ -71,9 +71,11 @@ int main(int argc, char **argv)
 
     }
 
+
     //Select from set file descriptors
     counter=select(maxfd+1,&rfds,(fd_set*)NULL,(fd_set*)NULL,(struct timeval *)NULL);
     if(counter<=0){printf("Counter <= 0\n");exit(1);}
+
 
     if(FD_ISSET(user->fd_udp_serv,&rfds) && user->state == access_server) //Servidor de Acesso
     {
@@ -107,7 +109,7 @@ int main(int argc, char **argv)
         close(newfd);
       }
     }
-    if(FD_ISSET(user->fd_tcp_mont,&rfds))     //Fonte/Acima
+    if(FD_ISSET(user->fd_tcp_mont,&rfds) && user->state != out)     //Fonte/Acima
     {
       if((n=read(user->fd_tcp_mont,buffer,128))!=0)
       {

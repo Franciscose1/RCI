@@ -1,14 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-struct QueryList{
-    char queryID[128];
-    int bestpops;
-    struct QueryList *next;
-};
-
-typedef struct QueryList QueryList;
+#include "querylist.h"
 
 QueryList* create_query(char *queryID, int bestpops)
 {
@@ -18,8 +8,9 @@ QueryList* create_query(char *queryID, int bestpops)
   ql->next = NULL;
   return ql;
 }
-void update_query(QueryList *ql, char *queryID, int avails)
+int update_query(QueryList *ql, char *queryID)
 {
+  int bestpops = 0;
   QueryList *curr, *aux;
 
   curr = ql;
@@ -28,16 +19,18 @@ void update_query(QueryList *ql, char *queryID, int avails)
     aux = curr->next;
     if(strcmp(aux->queryID,queryID) == 0)
     {
-      aux->bestpops -= avails;
+      aux->bestpops--;
       if(aux->bestpops <= 0)
       {
         curr->next = aux->next;
+        ql->bestpops--; //A ListHead guarda o numero de querys
         free(aux);
         break;
       }
     }
     curr = aux;
   }
+  return bestpops;
 }
 void print_querys(QueryList *ql)
 {
@@ -51,7 +44,7 @@ void print_querys(QueryList *ql)
   }
 }
 
-int main(int argc, char const *argv[])
+/*int main(int argc, char const *argv[])
 {
   char buffer[128];
   strcpy(buffer,argv[1]);
@@ -69,3 +62,4 @@ int main(int argc, char const *argv[])
 
   return 0;
 }
+*/

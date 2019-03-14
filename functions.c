@@ -154,6 +154,7 @@ int read_args(int argc, char **argv, User *user) //Precisa defesa contra opção
     memset(user->myClients[n],'\0',128);
   }
 
+  user->ql = create_query("ListHead",1);
 
   return 1;
 }
@@ -345,7 +346,52 @@ int handle_STDINmessage(char *msg, User *user)
 return 1;
 }
 
+int handle_PEERmessage(char *msg, User *user)
+{
+  int n = 0;
+  char *ptr;
+  char msgID[128] = {'\0'};
+  char stream_name[128] = {'\0'};
+  char ipaddr[128] = {'\0'};
+  char port[128] = {'\0'};
 
+  ptr = msg;
+  ptr += str_to_msgID(ptr,msgID);
+
+  if(strcmp(msgID,"WE") == 0)
+  {
+    str_to_streamID(ptr, stream_name, ipaddr, port);
+    if((strcmp(stream_name,user->stream_name)!=0)||(strcmp(ipaddr,user->stream_addr)!=0)||(strcmp(port,user->stream_port)!=0))
+    {
+      printf("Incompatible stream\n");
+      return 0;
+    }
+    msg_in_protocol(msg,"NEW_POP",user);
+    n = strlen(msg);
+    send_tcp(msg,user->fd_tcp_mont,n);
+    user->state = in;
+    if(user->fd_tcp_serv == 0){user->fd_tcp_serv = serv_tcp(user->tport);}
+  }
+  if(strcmp(msgID,"NP") == 0)
+  {
+    for(n=0; n < user->tcpsessions; n++) //Guarda ip e porto de novo cliente a jusante
+    {
+      if(strcmp(user->myClients[n],"\0") == 0)
+      {
+        str_to_msgID(ptr,stream_name); //Usa-se stream_name como buffer para poupar nas variaveis
+        strncpy(user->myClients[n],stream_name,127); //127 porque o tamanho da string é 128. "-1" para guerdar espaço para '\0'
+      }
+    }
+  }
+  if(strcmp(msgID,"RE") == 0)
+  {
+    close(user->fd_tcp_mont);
+    str_to_IP_PORT(ptr, ipaddr, port);
+    user->fd_tcp_mont = reach_tcp(ipaddr,port);
+  }
+
+  return 1;
+}
 
 //Mecanismo de adesão à árvore
 int join_tree(User *user)
