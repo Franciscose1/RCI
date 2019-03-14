@@ -66,3 +66,17 @@ int serv_tcp(char *port)
   }
   return fd;
 }
+
+int send_tcp(char *msg, int fd, int n)
+{
+  int nw = 0;
+  char *ptr;
+
+  ptr = &msg[0];
+  while(n>0)
+  {
+    if((nw=write(fd,ptr,n))<=0){printf("error: write\n"); return 0;}
+    n-=nw; ptr+=nw;
+  }
+  return 1;
+}

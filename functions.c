@@ -144,8 +144,17 @@ int read_args(int argc, char **argv, User *user) //Precisa defesa contra opção
   }
   if(strcmp(user->stream_name,"") == 0) return 0; //No stream specified
 
-  user->fd_clients = (int *)malloc(sizeof(int)*(user->bestpops)); //Array com bestpops file descriptors para os jusantes
-  memset(user->fd_clients, 0, sizeof (int)*user->bestpops);
+  user->fd_clients = (int *)malloc(sizeof(int)*(user->tcpsessions)); //Array com tcpsessions file descriptors para os jusantes
+  memset(user->fd_clients, 0, sizeof(int)*user->tcpsessions);
+
+  user->myClients = malloc(sizeof(char*)*(user->tcpsessions));
+  for (int n = 0; n < user->tcpsessions; n++)
+  {
+    user->myClients[n] = malloc(128*sizeof(char));
+    memset(user->myClients[n],'\0',128);
+  }
+
+  user->ql = create_query("ListHead",1);
 
   return 1;
 }
@@ -157,15 +166,35 @@ void msg_in_protocol(char *msg, char *label, User *user)
   {
     snprintf(msg, 128, "WHOISROOT %s:%s:%s %s:%s\n",
     user->stream_name, user->stream_addr, user->stream_port, user->ipaddr, user->uport);
+    return;
   }
   if(strcmp(label,"REMOVE")==0)
   {
     snprintf(msg, 128, "REMOVE %s:%s:%s\n",
     user->stream_name, user->stream_addr, user->stream_port);
+    return;
   }
   if(strcmp(label,"POPREQ")==0)
   {
     snprintf(msg, 128, "POPREQ\n");
+    return;
+  }
+  if(strcmp(label,"WELCOME")==0)
+  {
+    snprintf(msg, 128, "WE %s:%s:%s\n", user->stream_name, user->stream_addr, user->stream_port);
+    return;
+  }
+  if(strcmp(label,"REDIRECT")==0)
+  {
+    char ipaddr[128] = {'\0'}, port[128] = {'\0'};
+    str_to_IP_PORT(user->myClients[0], ipaddr, port);
+    snprintf(msg, 128, "RE %s:%s\n", ipaddr, port);
+    return;
+  }
+  if(strcmp(label,"NEW_POP")==0)
+  {
+    snprintf(msg, 128, "NP %s:%s\n", user->ipaddr, user->tport);
+    return;
   }
   if(strcmp(label,"DA")==0)
   {
@@ -176,13 +205,12 @@ void msg_in_protocol(char *msg, char *label, User *user)
 
 int handle_RSmessage(char *msg, User *user) //Servidor de Raizes
 {
-  int n = 0;
+
   char *ptr;
   char msgID[128] = {'\0'};
   char stream_name[128] = {'\0'};
   char ipaddr[128] = {'\0'};
   char port[128] = {'\0'};
-  char buffer[128] = {'\0'};
 
   ptr = msg;
   ptr += str_to_msgID(ptr,msgID);
@@ -194,12 +222,11 @@ int handle_RSmessage(char *msg, User *user) //Servidor de Raizes
     {
       printf("Incompatible stream\n");
       return 0;
-      //strcpy(flag,"BAD_ID");
     }
     user->state = access_server;
     user->fd_udp_serv = serv_udp(user->uport);
-    user->fd_tcp_serv = serv_tcp(user->tport);
     user->fd_tcp_mont = reach_tcp(user->stream_addr,user->stream_port);
+    if(user->fd_tcp_serv == 0){user->fd_tcp_serv = serv_tcp(user->tport);}
   }else if(strcmp(msgID,"ROOTIS")==0)
   {
     ptr += str_to_streamID(ptr, stream_name, ipaddr, port);
@@ -207,7 +234,6 @@ int handle_RSmessage(char *msg, User *user) //Servidor de Raizes
     {
       printf("Incompatible stream\n");
       return 0;
-      //strcpy(flag,"BAD_ID");
     }
 
     str_to_IP_PORT(ptr, ipaddr, port);
@@ -220,13 +246,11 @@ int handle_RSmessage(char *msg, User *user) //Servidor de Raizes
 
 int handle_ASmessage(char *msg, User *user) //Servidor de Acesso
 {
-  int n = 0;
   char *ptr;
   char msgID[128] = {'\0'};
   char stream_name[128] = {'\0'};
   char ipaddr[128] = {'\0'};
   char port[128] = {'\0'};
-  char buffer[128] = {'\0'};
 
   ptr = msg;
   ptr += str_to_msgID(ptr,msgID);
@@ -238,7 +262,6 @@ int handle_ASmessage(char *msg, User *user) //Servidor de Acesso
     {
       printf("Incompatible stream\n");
       return 0;
-      //strcpy(flag,"BAD_ID");
     }
     str_to_IP_PORT(ptr, ipaddr, port);
 
@@ -384,25 +407,77 @@ int handle_STDINmessage(char *msg, User *user) //STDIN
 	}
 	if(strcmp(buffer,"exit\n")==0)
 	{
-		msg_in_protocol(msg,"REMOVE",user);
-		send_udp(user->rsaddr,user->rsport,msg);
-		printf("EXIT SUCCESSFULL\n");
-    while(n < user->bestpops)
+    if(user->state == access_server)
+    {
+      msg_in_protocol(msg,"REMOVE",user);
+  		send_udp(user->rsaddr,user->rsport,msg);
+    }
+    while(n < user->tcpsessions)
     {
       if(user->fd_clients[n] != 0)
       {
         close(user->fd_clients[n]);
+        free(user->myClients[n]);
       }
       n++;
     }
+    free(user->fd_clients);
+    free(user->myClients);
 		close(user->fd_udp_serv);
 		close(user->fd_tcp_serv);
 		close(user->fd_tcp_mont);
-    free(user->fd_clients);
+    printf("EXIT SUCCESSFULL\n");
 		return(0);
 	}
 
 return 1;
+}
+
+int handle_PEERmessage(char *msg, User *user)
+{
+  int n = 0;
+  char *ptr;
+  char msgID[128] = {'\0'};
+  char stream_name[128] = {'\0'};
+  char ipaddr[128] = {'\0'};
+  char port[128] = {'\0'};
+
+  ptr = msg;
+  ptr += str_to_msgID(ptr,msgID);
+
+  if(strcmp(msgID,"WE") == 0)
+  {
+    str_to_streamID(ptr, stream_name, ipaddr, port);
+    if((strcmp(stream_name,user->stream_name)!=0)||(strcmp(ipaddr,user->stream_addr)!=0)||(strcmp(port,user->stream_port)!=0))
+    {
+      printf("Incompatible stream\n");
+      return 0;
+    }
+    msg_in_protocol(msg,"NEW_POP",user);
+    n = strlen(msg);
+    send_tcp(msg,user->fd_tcp_mont,n);
+    user->state = in;
+    if(user->fd_tcp_serv == 0){user->fd_tcp_serv = serv_tcp(user->tport);}
+  }
+  if(strcmp(msgID,"NP") == 0)
+  {
+    for(n=0; n < user->tcpsessions; n++) //Guarda ip e porto de novo cliente a jusante
+    {
+      if(strcmp(user->myClients[n],"\0") == 0)
+      {
+        str_to_msgID(ptr,stream_name); //Usa-se stream_name como buffer para poupar nas variaveis
+        strncpy(user->myClients[n],stream_name,127); //127 porque o tamanho da string é 128. "-1" para guerdar espaço para '\0'
+      }
+    }
+  }
+  if(strcmp(msgID,"RE") == 0)
+  {
+    close(user->fd_tcp_mont);
+    str_to_IP_PORT(ptr, ipaddr, port);
+    user->fd_tcp_mont = reach_tcp(ipaddr,port);
+  }
+
+  return 1;
 }
 
 //Mecanismo de adesão à árvore

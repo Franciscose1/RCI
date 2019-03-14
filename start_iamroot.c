@@ -9,7 +9,7 @@ int main(int argc, char **argv)
   char buffer[128] = {'\0'};
   fd_set rfds;
   struct sockaddr_in addr;
-  int n,nw;
+  int n,nw,i;
   unsigned int addrlen;
   int newfd;
   char *ptr;
@@ -34,7 +34,11 @@ int main(int argc, char **argv)
 
   while(1)
   {
-    //Reinicia o vetor de file descriptors
+
+    //Reinicia o buffer
+    memset(buffer,'\0',sizeof(buffer));
+
+    //Reinicia os vetor de file descriptors
     FD_ZERO(&rfds);
     FD_SET(STDIN_FILENO,&rfds); maxfd = 0; //Sets stdin file descriptor
 
@@ -47,7 +51,12 @@ int main(int argc, char **argv)
         exit(1);
       }
     }
-    //Set UDP server if program is the access server for the stream
+    //Arma descritor para ligação a montante
+    if(user->state != out)
+    {
+      FD_SET(user->fd_tcp_mont,&rfds);maxfd=max(maxfd,user->fd_tcp_mont);
+    }
+    //Arma descritor para receber mensagens por UDP, caso seja servidor de acesso
     if(user->state == access_server)
     {
       FD_SET(user->fd_udp_serv,&rfds);maxfd=max(maxfd,user->fd_udp_serv);  //Servidor de Acesso
@@ -56,12 +65,14 @@ int main(int argc, char **argv)
     if((user->state == in)||(user->state == access_server))
     {
       FD_SET(user->fd_tcp_serv,&rfds);maxfd=max(maxfd,user->fd_tcp_serv);
+      for(i=0;i<user->tcpsessions;i++)
+      {
+        FD_SET(user->fd_clients[i],&rfds);maxfd=max(maxfd,user->fd_clients[i]);
+      }
+
     }
-    //Set TCP connection with program a montante
-    if(user->state != out)
-    {
-      FD_SET(user->fd_tcp_mont,&rfds);maxfd=max(maxfd,user->fd_tcp_mont);
-    }
+
+
     //Select from set file descriptors
     counter=select(maxfd+1,&rfds,(fd_set*)NULL,(fd_set*)NULL,(struct timeval *)NULL);
     if(counter<=0){printf("Counter <= 0\n");exit(1);}
@@ -78,39 +89,53 @@ int main(int argc, char **argv)
         printf("error: accept\n");
         exit(1);
       }
-      for(n=0; n < user->bestpops; n++) //Guarda descritor para comunicar com jusante caso haja espaço
+      for(n=0; n < user->tcpsessions; n++) //Guarda descritor para comunicar com jusante caso haja espaço
       {
         if(user->fd_clients[n] == 0)
         {
           user->fd_clients[n] = newfd;
           //Send WELCOME
+          msg_in_protocol(buffer,"WELCOME",user);
+          n = strlen(buffer);
+          if(send_tcp(buffer,newfd,n) == 0) return 0;
           break;
         }
       }
-      if(n == user->bestpops) {} //Send Redirect
-
-      ptr = strcpy(buffer,"I SEE YOU\n");
-      n = strlen("I SEE YOU\n");
-      while(n>0)
+      if(n == user->tcpsessions)
       {
-        if((nw=write(newfd,ptr,n))<=0){printf("error: write\n"); exit(1);}
-        n-=nw; ptr+=nw;
+        //Send Redirect
+        msg_in_protocol(buffer,"REDIRECT",user);
+        n = strlen(buffer);
+        if(send_tcp(buffer,newfd,n) == 0) return 0;
+        close(newfd);
       }
     }
-    if(FD_ISSET(user->fd_tcp_mont,&rfds))     //Fonte/Acima
+    if(FD_ISSET(user->fd_tcp_mont,&rfds) && user->state != out)     //Fonte/Acima
     {
       if((n=read(user->fd_tcp_mont,buffer,128))!=0)
       {
+        printf("%s\n", buffer);
         if(n==-1){printf("error: read\n"); exit(1);}
-        ptr=&buffer[0];
-        while(n>0)
-        {
-          if((nw=write(1,ptr,n))<=0){printf("error: write\n"); exit(1);}
-          n-=nw; ptr+=nw;
-        }
+        if(handle_PEERmessage(buffer,user) == 0){printf("Unable to process PEER message\n"); return 0;}
       }else{
         close(user->fd_tcp_mont);
         user->state = out;
+      }
+    }
+    for(i=0;i<user->tcpsessions;i++)
+    {
+      if(FD_ISSET(user->fd_clients[i],&rfds) && user->fd_clients[i] != 0)
+      {
+        if((n=read(user->fd_clients[i],buffer,128))!=0)
+        {
+          printf("%s\n", buffer);
+          if(n==-1){printf("error: read\n"); exit(1);}
+          if(handle_PEERmessage(buffer,user) == 0){printf("Unable to process PEER message\n"); return 0;}
+        }else{
+          printf("Client left?\n");
+          close(user->fd_clients[i]);
+          user->fd_clients[i] = 0;
+        }
       }
     }
     if(FD_ISSET(STDIN_FILENO,&rfds))   //STDIN
@@ -132,3 +157,5 @@ int main(int argc, char **argv)
 //./iamroot grupo44:193.136.138.142:58001 -i 192.168.1.67 -u 58001 -t 58001
 //@tecnico
 //./iamroot grupo44:193.136.138.142:58001 -i 194.210.159.193 -u 58001 -t 58001
+
+//cd /Users/pedroflores/Documents/IST/5Ano2Sem/RCI/ProjectRepository
