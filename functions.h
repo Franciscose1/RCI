@@ -43,6 +43,7 @@ void msg_in_protocol(char *, char *, User *);
 int handle_RSmessage(char *, User *);
 int handle_ASmessage(char *, User *);
 int handle_STDINmessage(char *, User *);
+int handle_R2Rmessage(char *msg, User *user);
 //Mecanismo de adesão à árvore
 int join_tree(User *);
 

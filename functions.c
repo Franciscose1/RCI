@@ -277,6 +277,18 @@ int handle_R2Rmessage(char *msg, User *user) //iamroot to iamroot
           nbytes-=nw; ptr+=nw;
         }
         //Transforma em modo protocolo
+        char *msg = (char *)malloc(nbytes);
+        int total_enviado=0;
+		while(total_enviado<count2){
+			nbytes = write(clipboard_id, msg+total_enviado, count2-total_enviado);
+			if(nbytes==-1){ 
+				perror("Write: ");
+				return(0);
+			}
+		
+			total_enviado+=nbytes;
+		}
+	free(msg);	
         
 	}
   if(strcmp(msgID,"DA")==0)
@@ -308,11 +320,11 @@ int handle_R2Rmessage(char *msg, User *user) //iamroot to iamroot
 			nbytes = write(clipboard_id, msg+total_enviado, count2-total_enviado);
 			if(nbytes==-1){ 
 				perror("Write: ");
-			return(0);
-		}
+				return(0);
+			}
 		
-		total_enviado+=nbytes;
-	}
+			total_enviado+=nbytes;
+		}
 	free(msg);	
 		
 		
