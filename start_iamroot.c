@@ -135,6 +135,7 @@ int main(int argc, char **argv)
           printf("Client left?\n");
           close(user->fd_clients[i]);
           user->fd_clients[i] = 0;
+          memset(user->myClients[i],'\0',128);
         }
       }
     }
@@ -157,5 +158,7 @@ int main(int argc, char **argv)
 //./iamroot grupo44:193.136.138.142:58001 -i 192.168.1.67 -u 58001 -t 58001
 //@tecnico
 //./iamroot grupo44:193.136.138.142:58001 -i 194.210.159.193 -u 58001 -t 58001
+//My Fonte
+//./iamroot grupo44:192.168.1.67:57000 -i 192.168.1.67 -u 58001 -t 58001
 
 //cd /Users/pedroflores/Documents/IST/5Ano2Sem/RCI/ProjectRepository

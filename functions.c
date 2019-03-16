@@ -154,6 +154,13 @@ int read_args(int argc, char **argv, User *user) //Precisa defesa contra opção
     memset(user->myClients[n],'\0',128);
   }
 
+  user->POPlist = malloc(sizeof(char*)*(user->bestpops));
+  for (int n = 0; n < user->bestpops; n++)
+  {
+    user->POPlist[n] = malloc(128*sizeof(char));
+    snprintf(user->POPlist[n],128,"%s:%s",user->ipaddr,user->tport);
+  }
+
   user->ql = create_query("ListHead",1);
 
   return 1;
@@ -205,7 +212,6 @@ void msg_in_protocol(char *msg, char *label, User *user)
 
 int handle_RSmessage(char *msg, User *user) //Servidor de Raizes
 {
-
   char *ptr;
   char msgID[128] = {'\0'};
   char stream_name[128] = {'\0'};
@@ -270,90 +276,13 @@ int handle_ASmessage(char *msg, User *user) //Servidor de Acesso
   }else if(strcmp(msgID,"POPREQ")==0)
   {
     //BATOTA, ta a mandar o seu POP
-    snprintf(msg, 128, "POPRESP %s:%s:%s %s:%s\n",
-    user->stream_name, user->stream_addr, user->stream_port, user->ipaddr, user->tport);
+    ptr = user->POPlist[Randoms(0,user->bestpops - 1)];
+    str_to_IP_PORT(ptr,ipaddr,port);
+    /*snprintf(msg, 128, "POPRESP %s:%s:%s %s:%s\n",
+    user->stream_name, user->stream_addr, user->stream_port, ipaddr, port);*/
+    snprintf(msg, 128, "POPRESP %s:%s:%s %s\n",
+    user->stream_name, user->stream_addr, user->stream_port, user->POPlist[Randoms(0,user->bestpops - 1)]);
   }else{printf("AS Message not in protocol\n"); return 0;}
-
-  return 1;
-}
-
-int handle_R2Rmessage(char *msg, User *user) //iamroot to iamroot
-{
-  int nbytes,nw;
-  char *ptr;
-  char msgID[128] = {'\0'};
-	
-  char buffer[128] = {'\0'};
-
-  ptr = msg;
-  ptr += str_to_msgID(ptr,msgID);
-  
-  if(user->state==access_server)//Caso seja o root, recebe da fonte em formato fora do protocolo
-	{
-		if((nbytes=read(user->fd_tcp_mont,buffer,128))!=0)
-      {
-        if(nbytes==-1){printf("error: read\n"); exit(1);}
-		ptr=&buffer[0];
-        while(nbytes>0)
-        {
-          if((nw=write(1,ptr,nbytes))<=0){printf("error: write\n"); exit(1);}
-          nbytes-=nw; ptr+=nw;
-        }
-        //Transforma em modo protocolo
-        char *msg = (char *)malloc(nbytes);
-        int total_enviado=0;
-		while(total_enviado<count2){
-			nbytes = write(clipboard_id, msg+total_enviado, count2-total_enviado);
-			if(nbytes==-1){ 
-				perror("Write: ");
-				return(0);
-			}
-		
-			total_enviado+=nbytes;
-		}
-	free(msg);	
-        
-	}
-  if(strcmp(msgID,"DA")==0)
-  {
-		//Ler o tamanho do pacote <nbytes></n><DATA>
-		//Recebe o pacote
-		char *msg = (char *)malloc(nbytes);
-		total_recebido=0;
-		while(total_recebido<size_msg2){
-			nbytes = read(client_fd, msg+total_recebido, size_msg2-total_recebido);
-			if(nbytes==-1){ 
-				perror("read: ");
-				close(client_fd);
-				free(recebe);
-				free(msg);
-				return(0);
-			}			
-			total_recebido+=nbytes;
-		}
-		//Imprime no ecra
-		
-		//Envia para os que estão abaixo
-		int count2=count;												
-		void *msg = (void *)malloc(count2);
-		memcpy(msg,buf,count2);
-	
-		int total_enviado=0;
-		while(total_enviado<count2){
-			nbytes = write(clipboard_id, msg+total_enviado, count2-total_enviado);
-			if(nbytes==-1){ 
-				perror("Write: ");
-				return(0);
-			}
-		
-			total_enviado+=nbytes;
-		}
-	free(msg);	
-		
-		
-	  free(msg);
-	  
-  }
 
   return 1;
 }
@@ -476,6 +405,88 @@ int handle_PEERmessage(char *msg, User *user)
     str_to_IP_PORT(ptr, ipaddr, port);
     user->fd_tcp_mont = reach_tcp(ipaddr,port);
   }
+  if(strcmp(msgID,"PQ") == 0)
+  {
+
+    ptr += str_to_msgID(ptr,stream_name); //Usa-se stream_name como buffer para poupar nas variaveis
+    sscanf(ptr,"%d",&n);
+
+    add_query(user->ql,stream_name,n);
+
+    if((n = available(user)) > 0)
+    {
+      //POPREPLY
+      snprintf(msg,128,"PR %s %s:%s %d\n", stream_name, user->ipaddr, user->tport, n);
+      n = strlen(msg);
+      send_tcp(msg,user->fd_tcp_mont,n);
+
+      if((n = update_query(user->ql,stream_name)) > 0) //Verifica quantos POPs ainda são precisos
+      {
+        //Propaga POPQUERY decrementado
+        snprintf(msg,128,"PQ %s %d\n", stream_name, n);
+        n = strlen(msg);
+        for(int i = 0; i < user->tcpsessions; i++)
+        {
+          if(user->fd_clients[i] != 0)
+            send_tcp(msg,user->fd_clients[i],n);
+        }
+      }
+    }else{
+      n = strlen(msg);
+      for(int i = 0; i < user->tcpsessions; i++)
+      {
+        if(user->fd_clients[i] != 0)
+          send_tcp(msg,user->fd_clients[i],n);
+      }
+    }
+
+  }
+  if(strcmp(msgID,"PR") == 0)
+  {
+    ptr += str_to_msgID(ptr,stream_name); //Usa-se stream_name como buffer para poupar nas variaveis
+
+    if(check4query(user->ql,stream_name)) //Verifica se espera a query recebida
+    {
+      n = update_query(user->ql,stream_name);
+      if(user->state == access_server)
+      {
+        str_to_IP_PORT(ptr,ipaddr,port);
+        memset(user->POPlist[n],'\0',128);
+        snprintf(user->POPlist[n],128,"%s:%s",ipaddr,port);
+      }else if(user->state == in){
+        //Reencaminha a montante o POPreply
+        n = strlen(msg);
+        send_tcp(msg,user->fd_tcp_mont,n);
+      }
+    }
+    print_querys(user->ql);
+  }
+  if(strcmp(msgID,"DA") == 0)
+  {
+    sscanf(ptr,"%d",&n);
+    n++;
+    snprintf(msg,128,"%s %d",msgID,n);
+    n = strlen(msg);
+    for(int i = 0; i < user->tcpsessions; i++)
+    {
+      if(user->fd_clients[i] != 0)
+        send_tcp(msg,user->fd_clients[i],n);
+    }
+  }
+  if(strcmp(msgID,"POPQUERY") == 0)
+  {
+    snprintf(msg, 128, "PQ %04X %d",user->ql->bestpops, user->bestpops);
+    n = strlen(msg);
+    snprintf(ipaddr,128,"%04X",user->ql->bestpops);
+    add_query(user->ql,ipaddr,user->bestpops);
+    for(int i = 0; i < user->tcpsessions; i++)
+    {
+      if(user->fd_clients[i] != 0)
+        send_tcp(msg,user->fd_clients[i],n);
+    }
+    
+  }
+
 
   return 1;
 }
@@ -508,4 +519,17 @@ int join_tree(User *user)
   }
 
   return 1;
+}
+
+//Verifica disponibilidade
+int available(User *user)
+{
+  int i,n = 0;
+
+  for(i = 0; i < user->tcpsessions; i++)
+  {
+    if(user->fd_clients[i] == 0)
+      n++;
+  }
+  return n;
 }

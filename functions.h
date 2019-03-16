@@ -28,7 +28,7 @@ struct USER{
   int synopse;
   enum {access_server,out,in,waiting} state;
   int fd_udp_serv, fd_tcp_serv, fd_tcp_mont, *fd_clients;
-  char **myClients;
+  char **myClients, **POPlist;
   QueryList *ql;
 };
 
@@ -51,5 +51,8 @@ int handle_PEERmessage(char *, User *);
 
 //Mecanismo de adesão à árvore
 int join_tree(User *);
+
+//Verifica disponibilidade
+int available(User *);
 
 #endif

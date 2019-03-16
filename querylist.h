@@ -13,8 +13,11 @@ struct QueryList{
 
 typedef struct QueryList QueryList;
 
-QueryList* create_query(char *, int );
-int update_query(QueryList *, char *, int );
-void print_querys(QueryList *ql);
+QueryList* create_query(char *, int);
+void add_query(QueryList *, char *, int);
+int update_query(QueryList *, char *);
+int check4query(QueryList *, char *);
+void print_querys(QueryList *);
+int Randoms(int , int);
 
 #endif
