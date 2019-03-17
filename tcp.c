@@ -27,7 +27,7 @@ int reach_tcp(char *ip, char *port)
   if((n=connect(fd,res->ai_addr,res->ai_addrlen))==-1)
   {
     printf("error: connect tcp\n");
-    exit(1);
+    return 0;
   }
 
   return fd;
@@ -67,16 +67,27 @@ int serv_tcp(char *port)
   return fd;
 }
 
-int send_tcp(char *msg, int fd, int n)
+int send_tcp(char *msg, int fd)
 {
-  int nw = 0;
+  int nw = 0, n;
   char *ptr;
 
+  n = strlen(msg);
   ptr = &msg[0];
   while(n>0)
   {
     if((nw=write(fd,ptr,n))<=0){printf("error: write\n"); return 0;}
     n-=nw; ptr+=nw;
+  }
+  return 1;
+}
+
+int dissipate(char *msg, User *user)
+{
+  for(int i = 0; i < user->tcpsessions; i++)
+  {
+    if(user->fd_clients[i] != 0)
+      send_tcp(msg,user->fd_clients[i]);
   }
   return 1;
 }

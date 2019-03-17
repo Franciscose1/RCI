@@ -9,14 +9,12 @@ int str_to_msgID(char *ptr, char *msgID)
 
   if(sscanf(ptr, "%s%n", msgID, &n)==1)
   {
-    //printf("%s\n", stream_name);
     ptr += n; /* advance the pointer by the number of characters read */
     ncount += n;
     if ((*ptr != ' ')&&(*ptr != '\n'))
     {
       printf("Incompatible with protocol\n");
       return 0;
-      //strcpy(flag,"BAD_ID");
     }
     ncount++;
   }else{
@@ -246,6 +244,9 @@ int handle_RSmessage(char *msg, User *user) //Servidor de Raizes
     strcpy(msg,"POPREQ\n");
     reach_udp(ipaddr,port,msg);
     user->state = waiting;
+  }else{
+    printf("RS message not processed\n");
+    return 0;
   }
   return 1;
 }
@@ -271,26 +272,151 @@ int handle_ASmessage(char *msg, User *user) //Servidor de Acesso
     }
     str_to_IP_PORT(ptr, ipaddr, port);
 
-    user->fd_tcp_mont = reach_tcp(ipaddr,port);
-    user->state = waiting; //Ainda não defende contra IPs fantasma
+    //IP e porto fornecidos não correspondem aos da própria root
+    if((strcmp(ipaddr,user->ipaddr) != 0) || (strcmp(port,user->tport) != 0))
+    {
+      user->fd_tcp_mont = reach_tcp(ipaddr,port);
+
+      //Connect SUCCESSFULL (reach_tcp returns 0 otherwise)
+      if(user->fd_tcp_mont == 0)
+        user->state = out;
+    }
+
+
   }else if(strcmp(msgID,"POPREQ")==0)
   {
-    //BATOTA, ta a mandar o seu POP
-    ptr = user->POPlist[Randoms(0,user->bestpops - 1)];
-    str_to_IP_PORT(ptr,ipaddr,port);
-    /*snprintf(msg, 128, "POPRESP %s:%s:%s %s:%s\n",
-    user->stream_name, user->stream_addr, user->stream_port, ipaddr, port);*/
-    snprintf(msg, 128, "POPRESP %s:%s:%s %s\n",
-    user->stream_name, user->stream_addr, user->stream_port, user->POPlist[Randoms(0,user->bestpops - 1)]);
+    //Raiz tem disponibilidade
+    if(available(user))
+    {
+      snprintf(msg, 128, "POPRESP %s:%s:%s %s:%s\n",
+      user->stream_name, user->stream_addr, user->stream_port, user->ipaddr, user->tport);
+    //Raiz não tem disponibilidade, fornece IP:PORT da lista de POPs
+    }else{
+      snprintf(msg, 128, "POPRESP %s:%s:%s %s\n",
+      user->stream_name, user->stream_addr, user->stream_port, user->POPlist[Randoms(0,user->bestpops - 1)]);
+    }
+
+
   }else{printf("AS Message not in protocol\n"); return 0;}
 
   return 1;
 }
 
+int handle_PEERmessage(char *msg, User *user)
+{
+  int n = 0;
+  char *ptr;
+  char msgID[128] = {'\0'};
+  char stream_name[128] = {'\0'};
+  char ipaddr[128] = {'\0'};
+  char port[128] = {'\0'};
+
+  ptr = msg;
+  ptr += str_to_msgID(ptr,msgID);
+
+  if(strcmp(msgID,"WE") == 0)
+  {
+    str_to_streamID(ptr, stream_name, ipaddr, port);
+    if((strcmp(stream_name,user->stream_name)!=0)||(strcmp(ipaddr,user->stream_addr)!=0)||(strcmp(port,user->stream_port)!=0))
+    {
+      printf("Incompatible stream\n");
+      return 0;
+    }
+    msg_in_protocol(msg,"NEW_POP",user);
+    send_tcp(msg,user->fd_tcp_mont);
+    user->state = in;
+    if(user->fd_tcp_serv == 0){user->fd_tcp_serv = serv_tcp(user->tport);}
+  }
+  if(strcmp(msgID,"NP") == 0)
+  {
+    for(n=0; n < user->tcpsessions; n++) //Guarda ip e porto de novo cliente a jusante
+    {
+      if(strcmp(user->myClients[n],"\0") == 0)
+      {
+        str_to_msgID(ptr,stream_name); //Usa-se stream_name como buffer para poupar nas variaveis
+        strncpy(user->myClients[n],stream_name,127); //127 porque o tamanho da string é 128. "-1" para guerdar espaço para '\0'
+      }
+    }
+  }
+  if(strcmp(msgID,"RE") == 0)
+  {
+    close(user->fd_tcp_mont);
+    str_to_IP_PORT(ptr, ipaddr, port);
+    user->fd_tcp_mont = reach_tcp(ipaddr,port);
+  }
+  if(strcmp(msgID,"PQ") == 0)
+  {
+
+    ptr += str_to_msgID(ptr,stream_name); //Usa-se stream_name como buffer para poupar nas variaveis
+    sscanf(ptr,"%d",&n);
+
+    add_query(user->ql,stream_name,n);
+
+    if((n = available(user)) > 0)
+    {
+      //POPREPLY
+      snprintf(msg,128,"PR %s %s:%s %d\n", stream_name, user->ipaddr, user->tport, n);
+      send_tcp(msg,user->fd_tcp_mont);
+
+      if((n = update_query(user->ql,stream_name)) > 0) //Verifica quantos POPs ainda são precisos
+      {
+        //Propaga POPQUERY decrementado
+        snprintf(msg,128,"PQ %s %d\n", stream_name, n);
+
+        dissipate(msg,user);
+      }
+    }else{
+      dissipate(msg,user);
+    }
+  }
+  if(strcmp(msgID,"PR") == 0)
+  {
+    ptr += str_to_msgID(ptr,stream_name); //Usa-se stream_name como buffer para poupar nas variaveis
+
+    if(check4query(user->ql,stream_name)) //Verifica se espera a query recebida
+    {
+      n = update_query(user->ql,stream_name);
+      if(user->state == access_server)
+      {
+        str_to_IP_PORT(ptr,ipaddr,port);
+        memset(user->POPlist[n],'\0',128);
+        snprintf(user->POPlist[n],128,"%s:%s",ipaddr,port);
+      }else if(user->state == in){
+        //Reencaminha a montante o POPreply
+        send_tcp(msg,user->fd_tcp_mont);
+      }
+    }
+    print_querys(user->ql);
+  }
+  if(strcmp(msgID,"DA") == 0)
+  {
+    sscanf(ptr,"%d",&n);
+    n++;
+    snprintf(msg,128,"%s %d",msgID,n);
+
+    dissipate(msg,user);
+  }
+  if(strcmp(msgID,"POPQUERY") == 0)
+  {
+    snprintf(msg, 128, "PQ %04X %d",user->ql->bestpops, user->bestpops);
+    snprintf(ipaddr,128,"%04X",user->ql->bestpops);
+    add_query(user->ql,ipaddr,user->bestpops);
+
+    dissipate(msg,user);
+
+  }
+  if(strcmp(msgID,"LIST") == 0)
+  {
+    for(int i = 0; i < user->bestpops; i++)
+    {
+      printf("%s\n", user->POPlist[i]);
+    }
+  }
+  return 1;
+}
 
 int handle_STDINmessage(char *msg, User *user) //STDIN
 {
-  int n = 0;
 	char buffer[128] = {'\0'};
 
 	strcpy(buffer,msg);
@@ -336,159 +462,12 @@ int handle_STDINmessage(char *msg, User *user) //STDIN
 	}
 	if(strcmp(buffer,"exit\n")==0)
 	{
-    if(user->state == access_server)
-    {
-      msg_in_protocol(msg,"REMOVE",user);
-  		send_udp(user->rsaddr,user->rsport,msg);
-    }
-    while(n < user->tcpsessions)
-    {
-      if(user->fd_clients[n] != 0)
-      {
-        close(user->fd_clients[n]);
-        free(user->myClients[n]);
-      }
-      n++;
-    }
-    free(user->fd_clients);
-    free(user->myClients);
-		close(user->fd_udp_serv);
-		close(user->fd_tcp_serv);
-		close(user->fd_tcp_mont);
+    clean_exit(user);
     printf("EXIT SUCCESSFULL\n");
 		return(0);
 	}
 
 return 1;
-}
-
-int handle_PEERmessage(char *msg, User *user)
-{
-  int n = 0;
-  char *ptr;
-  char msgID[128] = {'\0'};
-  char stream_name[128] = {'\0'};
-  char ipaddr[128] = {'\0'};
-  char port[128] = {'\0'};
-
-  ptr = msg;
-  ptr += str_to_msgID(ptr,msgID);
-
-  if(strcmp(msgID,"WE") == 0)
-  {
-    str_to_streamID(ptr, stream_name, ipaddr, port);
-    if((strcmp(stream_name,user->stream_name)!=0)||(strcmp(ipaddr,user->stream_addr)!=0)||(strcmp(port,user->stream_port)!=0))
-    {
-      printf("Incompatible stream\n");
-      return 0;
-    }
-    msg_in_protocol(msg,"NEW_POP",user);
-    n = strlen(msg);
-    send_tcp(msg,user->fd_tcp_mont,n);
-    user->state = in;
-    if(user->fd_tcp_serv == 0){user->fd_tcp_serv = serv_tcp(user->tport);}
-  }
-  if(strcmp(msgID,"NP") == 0)
-  {
-    for(n=0; n < user->tcpsessions; n++) //Guarda ip e porto de novo cliente a jusante
-    {
-      if(strcmp(user->myClients[n],"\0") == 0)
-      {
-        str_to_msgID(ptr,stream_name); //Usa-se stream_name como buffer para poupar nas variaveis
-        strncpy(user->myClients[n],stream_name,127); //127 porque o tamanho da string é 128. "-1" para guerdar espaço para '\0'
-      }
-    }
-  }
-  if(strcmp(msgID,"RE") == 0)
-  {
-    close(user->fd_tcp_mont);
-    str_to_IP_PORT(ptr, ipaddr, port);
-    user->fd_tcp_mont = reach_tcp(ipaddr,port);
-  }
-  if(strcmp(msgID,"PQ") == 0)
-  {
-
-    ptr += str_to_msgID(ptr,stream_name); //Usa-se stream_name como buffer para poupar nas variaveis
-    sscanf(ptr,"%d",&n);
-
-    add_query(user->ql,stream_name,n);
-
-    if((n = available(user)) > 0)
-    {
-      //POPREPLY
-      snprintf(msg,128,"PR %s %s:%s %d\n", stream_name, user->ipaddr, user->tport, n);
-      n = strlen(msg);
-      send_tcp(msg,user->fd_tcp_mont,n);
-
-      if((n = update_query(user->ql,stream_name)) > 0) //Verifica quantos POPs ainda são precisos
-      {
-        //Propaga POPQUERY decrementado
-        snprintf(msg,128,"PQ %s %d\n", stream_name, n);
-        n = strlen(msg);
-        for(int i = 0; i < user->tcpsessions; i++)
-        {
-          if(user->fd_clients[i] != 0)
-            send_tcp(msg,user->fd_clients[i],n);
-        }
-      }
-    }else{
-      n = strlen(msg);
-      for(int i = 0; i < user->tcpsessions; i++)
-      {
-        if(user->fd_clients[i] != 0)
-          send_tcp(msg,user->fd_clients[i],n);
-      }
-    }
-
-  }
-  if(strcmp(msgID,"PR") == 0)
-  {
-    ptr += str_to_msgID(ptr,stream_name); //Usa-se stream_name como buffer para poupar nas variaveis
-
-    if(check4query(user->ql,stream_name)) //Verifica se espera a query recebida
-    {
-      n = update_query(user->ql,stream_name);
-      if(user->state == access_server)
-      {
-        str_to_IP_PORT(ptr,ipaddr,port);
-        memset(user->POPlist[n],'\0',128);
-        snprintf(user->POPlist[n],128,"%s:%s",ipaddr,port);
-      }else if(user->state == in){
-        //Reencaminha a montante o POPreply
-        n = strlen(msg);
-        send_tcp(msg,user->fd_tcp_mont,n);
-      }
-    }
-    print_querys(user->ql);
-  }
-  if(strcmp(msgID,"DA") == 0)
-  {
-    sscanf(ptr,"%d",&n);
-    n++;
-    snprintf(msg,128,"%s %d",msgID,n);
-    n = strlen(msg);
-    for(int i = 0; i < user->tcpsessions; i++)
-    {
-      if(user->fd_clients[i] != 0)
-        send_tcp(msg,user->fd_clients[i],n);
-    }
-  }
-  if(strcmp(msgID,"POPQUERY") == 0)
-  {
-    snprintf(msg, 128, "PQ %04X %d",user->ql->bestpops, user->bestpops);
-    n = strlen(msg);
-    snprintf(ipaddr,128,"%04X",user->ql->bestpops);
-    add_query(user->ql,ipaddr,user->bestpops);
-    for(int i = 0; i < user->tcpsessions; i++)
-    {
-      if(user->fd_clients[i] != 0)
-        send_tcp(msg,user->fd_clients[i],n);
-    }
-    
-  }
-
-
-  return 1;
 }
 
 //Mecanismo de adesão à árvore
@@ -532,4 +511,39 @@ int available(User *user)
       n++;
   }
   return n;
+}
+
+//Fecha sockets e liberta memória alocada
+void clean_exit(User *user)
+{
+  int n;
+  char msg[128] = {'\0'};
+
+  if(user->state == access_server)
+  {
+    msg_in_protocol(msg,"REMOVE",user);
+    send_udp(user->rsaddr,user->rsport,msg);
+    close(user->fd_udp_serv);
+  }
+  for(n = 0; n < user->tcpsessions; n++)
+  {
+    free(user->myClients[n]);
+
+    //Previne fechar STDIN_FILENO
+    if(user->fd_clients[n] != 0)
+    {
+      close(user->fd_clients[n]);
+    }
+  }
+  for(n = 0; n < user->bestpops; n++)
+  {
+    free(user->POPlist[n]);
+  }
+  free(user->fd_clients);
+  free(user->myClients);
+  free(user->POPlist);
+  close(user->fd_tcp_serv);
+  close(user->fd_tcp_mont);
+
+  return;
 }

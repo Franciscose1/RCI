@@ -48,8 +48,10 @@ int main(int argc, char **argv)
       if(join_tree(user) == 0)
       {
         printf("Unable to reach stream service tree\n");
+        clean_exit(user);
         exit(1);
       }
+      if(user->state == out) continue; //Não consegui ligar-se ao IP fornecido, try again
     }
     //Arma descritor para ligação a montante
     if(user->state != out)
@@ -61,7 +63,7 @@ int main(int argc, char **argv)
     {
       FD_SET(user->fd_udp_serv,&rfds);maxfd=max(maxfd,user->fd_udp_serv);  //Servidor de Acesso
     }
-    //Set TCP server if program is in the tree
+    //Arma descritores para ligações a jusante
     if((user->state == in)||(user->state == access_server))
     {
       FD_SET(user->fd_tcp_serv,&rfds);maxfd=max(maxfd,user->fd_tcp_serv);
@@ -69,7 +71,6 @@ int main(int argc, char **argv)
       {
         FD_SET(user->fd_clients[i],&rfds);maxfd=max(maxfd,user->fd_clients[i]);
       }
-
     }
 
 
@@ -87,6 +88,7 @@ int main(int argc, char **argv)
       if((newfd=accept(user->fd_tcp_serv,(struct sockaddr*)&addr,&addrlen))==-1)
       {
         printf("error: accept\n");
+        clean_exit(user);
         exit(1);
       }
       for(n=0; n < user->tcpsessions; n++) //Guarda descritor para comunicar com jusante caso haja espaço
@@ -96,17 +98,15 @@ int main(int argc, char **argv)
           user->fd_clients[n] = newfd;
           //Send WELCOME
           msg_in_protocol(buffer,"WELCOME",user);
-          n = strlen(buffer);
-          if(send_tcp(buffer,newfd,n) == 0) return 0;
+          if(send_tcp(buffer,newfd) == 0){printf("Client left?\n");close(newfd);}
           break;
         }
       }
-      if(n == user->tcpsessions)
+      if(n == user->tcpsessions) //REDIRECT caso não haja espaço para mais ligações a jusante
       {
         //Send Redirect
         msg_in_protocol(buffer,"REDIRECT",user);
-        n = strlen(buffer);
-        if(send_tcp(buffer,newfd,n) == 0) return 0;
+        if(send_tcp(buffer,newfd) == 0){printf("Client left? (Before redirect)\n");}
         close(newfd);
       }
     }
@@ -116,7 +116,7 @@ int main(int argc, char **argv)
       {
         printf("%s\n", buffer);
         if(n==-1){printf("error: read\n"); exit(1);}
-        if(handle_PEERmessage(buffer,user) == 0){printf("Unable to process PEER message\n"); return 0;}
+        if(handle_PEERmessage(buffer,user) == 0){printf("Unable to process PEER message\n"); clean_exit(user); exit(1);}
       }else{
         close(user->fd_tcp_mont);
         user->state = out;
@@ -130,7 +130,7 @@ int main(int argc, char **argv)
         {
           printf("%s\n", buffer);
           if(n==-1){printf("error: read\n"); exit(1);}
-          if(handle_PEERmessage(buffer,user) == 0){printf("Unable to process PEER message\n"); return 0;}
+          if(handle_PEERmessage(buffer,user) == 0){printf("Unable to process PEER message\n"); clean_exit(user); exit(1);}
         }else{
           printf("Client left?\n");
           close(user->fd_clients[i]);
@@ -145,8 +145,7 @@ int main(int argc, char **argv)
 
       if(handle_STDINmessage(buffer,user)==0)
       {
-        close(newfd);
-		    exit(2);
+		    exit(1);
 		  }
       n = strlen(buffer);
     }

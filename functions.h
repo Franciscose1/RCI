@@ -55,4 +55,7 @@ int join_tree(User *);
 //Verifica disponibilidade
 int available(User *);
 
+//Fecha sockets e liberta memória alocada
+void clean_exit(User *);
+
 #endif
