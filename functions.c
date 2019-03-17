@@ -198,7 +198,7 @@ void msg_in_protocol(char *msg, char *label, User *user)
   }
   if(strcmp(label,"DA")==0)
   {
-    snprintf(msg, 128, "DA\n");
+    snprintf(msg, 128, "DA %d\n\n");
   }
 
 }
@@ -277,6 +277,33 @@ int handle_ASmessage(char *msg, User *user) //Servidor de Acesso
   return 1;
 }
 
+int handle_SOURCEmessage(char *msg, User *user)
+{
+	char buffer[128] = {'\0'};
+	if((nbytes=read(user->fd_tcp_mont,buffer,128))!=0)
+      {
+		  
+        if(nbytes==-1){printf("error: read\n"); exit(1);}
+		ptr=&buffer[0];
+        while(nbytes>0)
+        {
+          if((nw=write(1,ptr,nbytes))<=0){printf("error: write\n"); exit(1);}
+          nbytes-=nw; ptr+=nw;
+        }
+        
+        
+        //Transforma em modo protocolo
+        char *msg = (char *)malloc(nbytes+7);
+		snprintf(msg, 128, "DA %4.4h\n",nbytes);
+		memcpy(msg+7,buffer,nbytes);
+
+		for(n=0; n < user->tcpsessions; n++) //Envia para os a montante
+			if(user->fd_clients[n] != 0)
+				if(send_tcp(buffer,user->fd_clients[n],nbytes+7) == 0) return 0;
+		free(msg);	
+
+	}
+}
 int handle_R2Rmessage(char *msg, User *user) //iamroot to iamroot
 {
   int nbytes,nw;
@@ -357,7 +384,7 @@ int handle_R2Rmessage(char *msg, User *user) //iamroot to iamroot
 
   return 1;
 }
-
+}
 
 int handle_STDINmessage(char *msg, User *user) //STDIN
 {

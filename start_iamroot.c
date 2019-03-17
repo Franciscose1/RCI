@@ -112,8 +112,17 @@ int main(int argc, char **argv)
     }
     if(FD_ISSET(user->fd_tcp_mont,&rfds) && user->state != out)     //Fonte/Acima
     {
-      if((n=read(user->fd_tcp_mont,buffer,128))!=0)
+		if(user->state==access_server)//Caso seja o root, recebe da fonte em formato fora do protocolo
+		{
+			if(handle_SOURCEmessage(buffer,user)==0){
+				printf("Problems with the source");
+				return 0;
+			}
+		}
+
+		if((n=read(user->fd_tcp_mont,buffer,128))!=0)
       {
+		   
         printf("%s\n", buffer);
         if(n==-1){printf("error: read\n"); exit(1);}
         if(handle_PEERmessage(buffer,user) == 0){printf("Unable to process PEER message\n"); return 0;}

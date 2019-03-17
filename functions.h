@@ -47,6 +47,7 @@ int handle_RSmessage(char *, User *);
 int handle_ASmessage(char *, User *);
 int handle_STDINmessage(char *, User *);
 int handle_R2Rmessage(char *msg, User *user);
+int handle_SOURCEmessage(char *msg, User *user);
 int handle_PEERmessage(char *, User *);
 
 //Mecanismo de adesão à árvore
