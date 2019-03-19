@@ -278,13 +278,41 @@ int handle_ASmessage(char *msg, User *user) //Servidor de Acesso
 }
 
 
-int handle_PACKETmessage(char *msg, User *user, int *nbytesleft,int totalbytes, int bytesread)
+int handle_PACKETmessage(char *msg, char *packet User *user, int *nbytesleft,int totalbytes, int bytesread)
 {
-	if(bytesread <= totalbytes-nbytesleft){
-		memcpy(msg,buffer,nbytes);
-	
-	
+	int retorno;
+	//Caso o packet completo já esteja a meio e esteja o resto dentro do pacote que recebeu.
+	if(nbytesleft <=bytesread ){
+		memcpy(packet+(totalbytes-nbytesleft),buffer,nbytesleft);
+		ptr=&packet[0];
+        while(totalbytes>0)
+        {
+          if((nw=write(1,ptr,nbytes))<=0){printf("error: write\n"); exit(1);}
+          totalbytes-=nw; ptr+=nw;
+        }
+        
+        //Transforma em modo protocolo
+        char *msg = (char *)malloc(totalbytes+7);
+		snprintf(msg, 128, "DA %4.4h\n",totalbytes);
+		memcpy(msg+7,packet,totalbytes);
+
+		for(n=0; n < user->tcpsessions; n++) //Envia para os a montante
+			if(user->fd_clients[n] != 0)
+				if(send_tcp(msg,user->fd_clients[n],nbytes+7) == 0) return 0;
+		free(msg);
+		retorno=nbytesleft;	
+		nbytesleft=0;
+		//Retorna o numero de bytes que leu do pacote para poder saber onde continuar a ler o resto do pacote
+		return(retorno);
 	}
+	//Caso o packet completo já esteja a meio e só esteja outra parte dentro do pacote que recebeu.
+	if(nbytesleft >bytesread ){
+		memcpy(packet+(totalbytes-nbytesleft),buffer,bytesread);
+		nbytesleft-=bytesread;
+		return(1);
+	}
+	
+	
 
 
 }
@@ -311,7 +339,7 @@ int handle_SOURCEmessage(char *msg, User *user)
 
 		for(n=0; n < user->tcpsessions; n++) //Envia para os a montante
 			if(user->fd_clients[n] != 0)
-				if(send_tcp(buffer,user->fd_clients[n],nbytes+7) == 0) return 0;
+				if(send_tcp(msg,user->fd_clients[n],nbytes+7) == 0) return 0;
 		free(msg);	
 
 	}

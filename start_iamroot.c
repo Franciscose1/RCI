@@ -124,7 +124,7 @@ int main(int argc, char **argv)
 		if((bytesread=read(user->fd_tcp_mont,buffer,128))!=0)
       {
 			if(nbytesleft > 0){
-			  if(handle_PACKETmessage(buffer,packet,user,&nbytesleft,totalbytes,bytesread)==0){
+			  if(handle_PACKETmessage(buffer,packet,user,&nbytesleft,&totalbytes,bytesread)==0){
 				printf("Problems with the packet");
 				return 0;
 			}
