@@ -277,6 +277,18 @@ int handle_ASmessage(char *msg, User *user) //Servidor de Acesso
   return 1;
 }
 
+
+int handle_PACKETmessage(char *msg, User *user, int *nbytesleft,int totalbytes, int bytesread)
+{
+	if(bytesread <= totalbytes-nbytesleft){
+		memcpy(msg,buffer,nbytes);
+	
+	
+	}
+
+
+}
+
 int handle_SOURCEmessage(char *msg, User *user)
 {
 	char buffer[128] = {'\0'};

@@ -10,6 +10,7 @@ int main(int argc, char **argv)
   fd_set rfds;
   struct sockaddr_in addr;
   int n,nw,i;
+  int nbytesleft=0;
   unsigned int addrlen;
   int newfd;
   char *ptr;
@@ -120,8 +121,19 @@ int main(int argc, char **argv)
 			}
 		}
 
-		if((n=read(user->fd_tcp_mont,buffer,128))!=0)
+		if((bytesread=read(user->fd_tcp_mont,buffer,128))!=0)
       {
+			if(nbytesleft > 0){
+			  if(handle_PACKETmessage(buffer,packet,user,&nbytesleft,totalbytes,bytesread)==0){
+				printf("Problems with the packet");
+				return 0;
+			}
+			  
+			  }
+			else{
+				
+				
+				}
 		   
         printf("%s\n", buffer);
         if(n==-1){printf("error: read\n"); exit(1);}
