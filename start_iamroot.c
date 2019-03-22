@@ -70,8 +70,9 @@ int main(int argc, char **argv)
       if(user->state == out)
       {
         tries++;
-        printf("%d\n", tries);
-        if(tries > 5){printf("Tried 5 times, not able to join stream\n"); clean_exit(user); exit(1);}
+        printf("Tried %d times, not able to join stream\n", tries);
+        if(tries > 5){clean_exit(user); exit(1);}
+        sleep(5);
         continue; //Não conseguiu ligar-se ao IP fornecido, try again
       }
     }
@@ -173,17 +174,14 @@ int main(int argc, char **argv)
       n = strlen(buffer);
     }
 
-    printf("%lu\n", time(NULL)-timer_start);
-    if(time(NULL)-timer_start > 10)
+    //Timer para o access_server
+    if(user->state == access_server)
     {
-      printf("%lu\n", time(NULL)-timer_start);
-      timer_start = time(NULL);
-    }
-
-    if(counter == 0) //select timed out
-    {
-      if(user->state == access_server)
+      if(time(NULL)-timer_start > 120 || counter == 0)
       {
+        //Reinicia o timer
+        timer_start = time(NULL);
+
         //Refresca servidor de raizes
         msg_in_protocol(buffer,"WHOISROOT",user);
         reach_udp(user->rsaddr,user->rsport,buffer);
@@ -192,6 +190,7 @@ int main(int argc, char **argv)
         strcpy(buffer,"POPQUERY\n");
         handle_PEERmessage(buffer,user);
       }
+
     }
   }//while(1)
 
@@ -199,8 +198,7 @@ int main(int argc, char **argv)
 
 //Pedro's PC
 //./iamroot grupo44:193.136.138.142:58001 -i 192.168.1.67 -u 58001 -t 58001
-//@tecnico
-//./iamroot grupo44:193.136.138.142:58001 -i 194.210.159.193 -u 58001 -t 58001
+
 //My Fonte
 //./iamroot grupo44:192.168.1.67:57000 -i 192.168.1.67 -u 58001 -t 58001
 
