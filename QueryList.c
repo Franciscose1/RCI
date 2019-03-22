@@ -8,6 +8,21 @@ QueryList* create_query(char *queryID, int bestpops)
   ql->next = NULL;
   return ql;
 }
+
+void add_query(QueryList *ql, char *queryID, int bestpops)
+{
+  QueryList *curr;
+
+  curr = ql;
+  while(curr->next != NULL)
+  {
+    curr = curr->next;
+  }
+
+  curr->next = create_query(queryID, bestpops);
+  ql->bestpops++;
+}
+
 int update_query(QueryList *ql, char *queryID)
 {
   int bestpops = 0;
@@ -20,10 +35,10 @@ int update_query(QueryList *ql, char *queryID)
     if(strcmp(aux->queryID,queryID) == 0)
     {
       aux->bestpops--;
+      bestpops = aux->bestpops;
       if(aux->bestpops <= 0)
       {
         curr->next = aux->next;
-        ql->bestpops--; //A ListHead guarda o numero de querys
         free(aux);
         break;
       }
@@ -32,6 +47,43 @@ int update_query(QueryList *ql, char *queryID)
   }
   return bestpops;
 }
+
+int check4query(QueryList *ql, char *queryID)
+{
+  int query_found = 0;
+  QueryList *curr, *aux;
+
+  curr = ql;
+  while(curr->next != NULL)
+  {
+    aux = curr->next;
+    if(strcmp(aux->queryID,queryID) == 0)
+    {
+      query_found = 1;
+    }
+    curr = aux;
+  }
+  return query_found;
+}
+
+void remove_query(QueryList *ql, char *queryID)
+{
+  QueryList *curr, *aux;
+
+  curr = ql;
+  while(curr->next != NULL)
+  {
+    aux = curr->next;
+    if(strcmp(aux->queryID,queryID) == 0)
+    {
+      curr->next = aux->next;
+      free(aux);
+      break;
+    }
+    curr = aux;
+  }
+}
+
 void print_querys(QueryList *ql)
 {
   QueryList *curr;
@@ -44,22 +96,9 @@ void print_querys(QueryList *ql)
   }
 }
 
-/*int main(int argc, char const *argv[])
+int Randoms(int lower, int upper)
 {
-  char buffer[128];
-  strcpy(buffer,argv[1]);
-  QueryList *ql = create_query(buffer,3);
-  strcpy(buffer,argv[2]);
-  ql->next = create_query(buffer,3);
-  strcpy(buffer,argv[3]);
-  ql->next->next = create_query(buffer,3);
-  printf("BEFORE UPDATE\n");
-  print_querys(ql);
-  strcpy(buffer,argv[2]);
-  update_query(ql,buffer,2);
-  printf("AFTER UPDATE\n");
-  print_querys(ql);
+  int num = (rand() % (upper - lower + 1)) + lower;
 
-  return 0;
+  return num;
 }
-*/

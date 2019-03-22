@@ -2,14 +2,16 @@
 
 /* requests available stream services from the default 193.136.138.142:59000
 if stream service is not specified by user*/
-void reach_udp(char *ip, char *port, char *msg)
+int reach_udp(char *ip, char *port, char *msg)
 {
   struct addrinfo hints, *res;
   struct sockaddr_in addr;
-  int fd, n, errcode;
+  int fd, n, errcode, counter, maxfd;
   unsigned int addrlen;
-  char buffer[128] = {'\0'}, msgID[128] = {'\0'};
+  char buffer[128] = {'\0'};
   char host[NI_MAXHOST],service[NI_MAXSERV];//consts in <netdb.h>
+  struct timeval tv = {10, 0};
+  fd_set rfds;
 
   memset(&hints, 0, sizeof hints);
   hints.ai_family = AF_INET; //IPv4
@@ -37,6 +39,17 @@ void reach_udp(char *ip, char *port, char *msg)
   //free addrinfo structure
   freeaddrinfo(res);
 
+  FD_SET(fd,&rfds); maxfd = fd;
+
+  counter=select(maxfd+1,&rfds,(fd_set*)NULL,(fd_set*)NULL, &tv);
+  if(counter<0){printf("Counter < 0\n");exit(1);}
+
+  if(counter == 0)
+  {
+    printf("recvfrom timed out\n");
+    return 0;
+  }
+
   //recvfrom
   addrlen = sizeof(addr);
   if((n=recvfrom(fd,buffer,128,0,(struct sockaddr*)&addr,&addrlen))==-1)
@@ -52,6 +65,8 @@ void reach_udp(char *ip, char *port, char *msg)
     fprintf(stderr,"error: getnameinfo: %s\n",gai_strerror(errcode));
   else
     printf("Sent by [%s:%s]\n",host,service);
+
+  return 1;
 }
 
 int send_udp(char *ip, char *port, char *msg)
@@ -88,7 +103,7 @@ int send_udp(char *ip, char *port, char *msg)
   return fd;
 }
 
-void recieveNsend_udp(int fd, char *msg, User *user)
+int recieveNsend_udp(int fd, char *msg, User *user)
 {
   struct sockaddr_in addr;
   int n, errcode;
@@ -101,7 +116,7 @@ void recieveNsend_udp(int fd, char *msg, User *user)
   if((n=recvfrom(fd,buffer,128,0,(struct sockaddr*)&addr,&addrlen))==-1)
   {
     printf("error: recvfrom\n");
-    exit(1);
+    return 0;
   }
   strcpy(msg,buffer);
   write(1,buffer,n);
@@ -118,7 +133,9 @@ void recieveNsend_udp(int fd, char *msg, User *user)
   //Responde de acordo
   n = strlen(buffer);
   n=sendto(fd,buffer,n,0,(struct sockaddr*)&addr,addrlen);
-  if(n==-1)/*error*/exit(1); //Exit se falhar, tem de ser mudado
+  if(n==-1){printf("error: sendto\n"); return 0;} //Exit se falhar, tem de ser mudado
+
+  return 1;
 }
 
 int serv_udp(char *port)

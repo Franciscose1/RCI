@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include "querylist.h"
 #define ON 1
 #define OFF 0
@@ -28,7 +29,8 @@ struct USER{
   int synopse;
   enum {access_server,out,in,waiting} state;
   int fd_udp_serv, fd_tcp_serv, fd_tcp_mont, *fd_clients;
-  char **myClients;
+  char uproot[128];
+  char **myClients, **POPlist;
   QueryList *ql;
 };
 
@@ -52,5 +54,11 @@ int handle_PEERmessage(char *, User *);
 
 //Mecanismo de adesão à árvore
 int join_tree(User *);
+
+//Verifica disponibilidade
+int available(User *);
+
+//Fecha sockets e liberta memória alocada
+void clean_exit(User *);
 
 #endif
