@@ -124,17 +124,17 @@ int main(int argc, char **argv)
 
 		if((bytesread=read(user->fd_tcp_mont,buffer,128))!=0)
       {
-			if(nbytesleft > 0){
-			  if(handle_PACKETmessage(buffer,packet,user,&nbytesleft,&totalbytes,bytesread)==0){
-				printf("Problems with the packet");
-				return 0;
-			}
-			  
+			if(nbytesleft > 0)
+			{
+				//retorno=ponto do buffer onde está. nbytesleft=bytes que faltam para o packet. totalbytes= tamanho total do packet. bytesread=retorno da função read.
+			  if(retorno=handle_PACKETmessage(buffer,packet,user,&nbytesleft,&totalbytes,bytesread)==0)
+			  {//retorno=0 fim do buffer
+				printf("end of buffer");
+				continue
 			  }
-			else{
-				
-				
-				}
+			  ptr=&packet[retorno];			  
+			}
+
 		   
         printf("%s\n", buffer);
         if(n==-1){printf("error: read\n"); clean_exit(user); exit(1);}
