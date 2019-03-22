@@ -82,12 +82,45 @@ int send_tcp(char *msg, int fd)
   return 1;
 }
 
-int dissipate(char *msg, User *user)
+int new_connection(User *user)
+{
+  int n,newfd;
+  char buffer[128] = {'\0'};
+  struct sockaddr_in addr;
+  unsigned int addrlen;
+
+  if((newfd=accept(user->fd_tcp_serv,(struct sockaddr*)&addr,&addrlen))==-1)
+  {
+    printf("error: accept\n");
+    return 0;
+  }
+  for(n=0; n < user->tcpsessions; n++) //Guarda descritor para comunicar com jusante caso haja espaço
+  {
+    if(user->fd_clients[n] == 0)
+    {
+      user->fd_clients[n] = newfd;
+      //Send WELCOME
+      msg_in_protocol(buffer,"WELCOME",user);
+      if(send_tcp(buffer,newfd) == 0){printf("Client left?\n");close(newfd);}
+      break;
+    }
+  }
+  if(n == user->tcpsessions) //REDIRECT caso não haja espaço para mais ligações a jusante
+  {
+    //Send Redirect
+    msg_in_protocol(buffer,"REDIRECT",user);
+    if(send_tcp(buffer,newfd) == 0){printf("Client left? (Before redirect)\n");}
+    close(newfd);
+  }
+  return 1;
+}
+
+void dissipate(char *msg, User *user)
 {
   for(int i = 0; i < user->tcpsessions; i++)
   {
     if(user->fd_clients[i] != 0)
       send_tcp(msg,user->fd_clients[i]);
   }
-  return 1;
+  return;
 }

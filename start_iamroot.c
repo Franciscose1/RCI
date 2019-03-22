@@ -1,18 +1,28 @@
 #include <stdio.h>
+#include <signal.h>
 #include "functions.h"
 #include "udp.h"
 #include "tcp.h"
 
+#include <time.h>
+
 int main(int argc, char **argv)
 {
-  int maxfd, counter;
+  int maxfd, counter, newfd;
   char buffer[128] = {'\0'};
   fd_set rfds;
-  struct sockaddr_in addr;
-  int n,nw,i;
-  unsigned int addrlen;
-  int newfd;
+  int n,i,tries;
   char *ptr;
+  struct timeval tv = {30, 0};
+
+  //Timer para refrescar raiz no servidor de raizes e/ou refrescar lista de POPs
+  time_t timer_start = time(NULL);
+
+  //Ignore SIGPIPE signal
+  struct sigaction act;
+  memset(&act,0,sizeof act);
+  act.sa_handler=SIG_IGN;
+  if(sigaction(SIGPIPE,&act,NULL)==-1){printf("Unable to handle SIGPIPE\n");exit(1);}
 
   //Estrutura com a informação sobre o programa e dados passados pelo utilizador
   User *user=(User *)malloc(sizeof(User));
@@ -32,11 +42,14 @@ int main(int argc, char **argv)
   //Programa começa fora da àrvore
   user->state = out;
 
-  while(1)
-  {
+  while(1){
 
     //Reinicia o buffer
     memset(buffer,'\0',sizeof(buffer));
+
+    //Reinicia o timeout
+    tv.tv_sec = 30;
+    tv.tv_usec = 0;
 
     //Reinicia os vetor de file descriptors
     FD_ZERO(&rfds);
@@ -51,7 +64,14 @@ int main(int argc, char **argv)
         clean_exit(user);
         exit(1);
       }
-      if(user->state == out) continue; //Não consegui ligar-se ao IP fornecido, try again
+      //Melhorar
+      if(user->state == out)
+      {
+        tries++;
+        printf("%d\n", tries);
+        if(tries > 5){printf("Tried 5 times, not able to join stream\n"); clean_exit(user); exit(1);}
+        continue; //Não conseguiu ligar-se ao IP fornecido, try again
+      }
     }
     //Arma descritor para ligação a montante
     if(user->state != out)
@@ -73,53 +93,35 @@ int main(int argc, char **argv)
       }
     }
 
-
     //Select from set file descriptors
-    counter=select(maxfd+1,&rfds,(fd_set*)NULL,(fd_set*)NULL,(struct timeval *)NULL);
-    if(counter<=0){printf("Counter <= 0\n");exit(1);}
-
+    counter=select(maxfd+1,&rfds,(fd_set*)NULL,(fd_set*)NULL, &tv);
+    if(counter<0){printf("Counter < 0\n");exit(1);}
 
     if(FD_ISSET(user->fd_udp_serv,&rfds) && user->state == access_server) //Servidor de Acesso
     {
       recieveNsend_udp(user->fd_udp_serv, buffer, user);
     }
-    if(FD_ISSET(user->fd_tcp_serv,&rfds) && user->state != waiting) //Clientes/Abaixo
+    if(FD_ISSET(user->fd_tcp_serv,&rfds) && user->state != waiting) //Clientes/Jusante
     {
-      if((newfd=accept(user->fd_tcp_serv,(struct sockaddr*)&addr,&addrlen))==-1)
+      if(new_connection(user) == 0)
       {
-        printf("error: accept\n");
         clean_exit(user);
         exit(1);
-      }
-      for(n=0; n < user->tcpsessions; n++) //Guarda descritor para comunicar com jusante caso haja espaço
-      {
-        if(user->fd_clients[n] == 0)
-        {
-          user->fd_clients[n] = newfd;
-          //Send WELCOME
-          msg_in_protocol(buffer,"WELCOME",user);
-          if(send_tcp(buffer,newfd) == 0){printf("Client left?\n");close(newfd);}
-          break;
-        }
-      }
-      if(n == user->tcpsessions) //REDIRECT caso não haja espaço para mais ligações a jusante
-      {
-        //Send Redirect
-        msg_in_protocol(buffer,"REDIRECT",user);
-        if(send_tcp(buffer,newfd) == 0){printf("Client left? (Before redirect)\n");}
-        close(newfd);
       }
     }
     if(FD_ISSET(user->fd_tcp_mont,&rfds) && user->state != out)     //Fonte/Acima
     {
       if((n=read(user->fd_tcp_mont,buffer,128))!=0)
       {
+        //Montante falou
         printf("%s\n", buffer);
-        if(n==-1){printf("error: read\n"); exit(1);}
+        if(n==-1){printf("error: read\n"); clean_exit(user); exit(1);}
         if(handle_PEERmessage(buffer,user) == 0){printf("Unable to process PEER message\n"); clean_exit(user); exit(1);}
       }else{
+        //Montante saiu
         close(user->fd_tcp_mont);
         user->state = out;
+        dissipate("BS\n",user);
       }
     }
     for(i=0;i<user->tcpsessions;i++)
@@ -129,7 +131,7 @@ int main(int argc, char **argv)
         if((n=read(user->fd_clients[i],buffer,128))!=0)
         {
           printf("%s\n", buffer);
-          if(n==-1){printf("error: read\n"); exit(1);}
+          if(n==-1){printf("error: read\n"); clean_exit(user); exit(1);}
           if(handle_PEERmessage(buffer,user) == 0){printf("Unable to process PEER message\n"); clean_exit(user); exit(1);}
         }else{
           printf("Client left?\n");
@@ -148,6 +150,27 @@ int main(int argc, char **argv)
 		    exit(1);
 		  }
       n = strlen(buffer);
+    }
+
+    printf("%lu\n", time(NULL)-timer_start);
+    if(time(NULL)-timer_start > 10)
+    {
+      printf("%lu\n", time(NULL)-timer_start);
+      timer_start = time(NULL);
+    }
+
+    if(counter == 0) //select timed out
+    {
+      if(user->state == access_server)
+      {
+        //Refresca servidor de raizes
+        msg_in_protocol(buffer,"WHOISROOT",user);
+        reach_udp(user->rsaddr,user->rsport,buffer);
+
+        //Faz POPQUERY para refrescar POPs
+        strcpy(buffer,"POPQUERY\n");
+        handle_PEERmessage(buffer,user);
+      }
     }
   }//while(1)
 

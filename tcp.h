@@ -13,6 +13,7 @@
 int reach_tcp(char *, char *);
 int serv_tcp(char *);
 int send_tcp(char *, int);
-int dissipate(char *, User *);
+int new_connection(User *);
+void dissipate(char *, User *);
 
 #endif

@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include "functions.h"
 
-void reach_udp(char *, char *, char *);
+int reach_udp(char *, char *, char *);
 int send_udp(char *, char *, char *);
 int recieveNsend_udp(int , char *, User *);
 int serv_udp(char *);

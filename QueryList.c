@@ -19,7 +19,6 @@ void add_query(QueryList *ql, char *queryID, int bestpops)
     curr = curr->next;
   }
 
-  //snprintf(queryID, sizeof queryID, "%04X",id);
   curr->next = create_query(queryID, bestpops);
   ql->bestpops++;
 }
@@ -65,6 +64,24 @@ int check4query(QueryList *ql, char *queryID)
     curr = aux;
   }
   return query_found;
+}
+
+void remove_query(QueryList *ql, char *queryID)
+{
+  QueryList *curr, *aux;
+
+  curr = ql;
+  while(curr->next != NULL)
+  {
+    aux = curr->next;
+    if(strcmp(aux->queryID,queryID) == 0)
+    {
+      curr->next = aux->next;
+      free(aux);
+      break;
+    }
+    curr = aux;
+  }
 }
 
 void print_querys(QueryList *ql)

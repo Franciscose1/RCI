@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include "querylist.h"
 #define ON 1
 #define OFF 0
@@ -28,6 +29,7 @@ struct USER{
   int synopse;
   enum {access_server,out,in,waiting} state;
   int fd_udp_serv, fd_tcp_serv, fd_tcp_mont, *fd_clients;
+  char uproot[128];
   char **myClients, **POPlist;
   QueryList *ql;
 };

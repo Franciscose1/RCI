@@ -17,6 +17,7 @@ QueryList* create_query(char *, int);
 void add_query(QueryList *, char *, int);
 int update_query(QueryList *, char *);
 int check4query(QueryList *, char *);
+void remove_query(QueryList *, char *);
 void print_querys(QueryList *);
 int Randoms(int , int);
 
