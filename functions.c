@@ -477,6 +477,7 @@ int handle_PEERmessage(char *msg, User *user)
     str_to_IP_PORT(ptr,ipaddr,port);
     if(strcmp(ipaddr,user->ipaddr) == 0 && strcmp(port,user->tport) == 0)
     {
+      memset(stream_name,'\0',128);
       ptr = stream_name;
       ncount = snprintf(ptr,128,"TR %s:%s %d\n",ipaddr,port,user->tcpsessions);
       for(int i = 0; i < user->tcpsessions; i++)
@@ -528,7 +529,6 @@ int handle_PEERmessage(char *msg, User *user)
       printf("%s:%s (%d",ipaddr,port,n);
       while((ncount = str_to_IP_PORT(ptr,ipaddr,port)))
       {
-
         ptr += ncount;
         printf(" %s:%s",ipaddr,port);
         snprintf(stream_name,128,"TQ %s:%s\n",ipaddr,port);
@@ -566,34 +566,66 @@ int handle_STDINmessage(char *msg, User *user) //STDIN
   }
 	if(strcmp(buffer,"status\n")==0)
 	{
+    printf("\n***STATUS***\n");
 		printf("Stream name: %s \n",user->stream_name); //identificação do stream;
 
     if(user->state == in) //Aplicação está ligada à árvore
     {
-      //printf("Stream is flowing\n");
+      printf("Stream is flowing\n");
       printf("I am not the root\n");
       printf("IP and port of Root a montante: %s\n",user->uproot);//endereço IP e porto TCP do ponto de acesso a montante
+      printf("My POP: %s:%s\n",user->ipaddr,user->tport);
+      printf("Max TCP sessions: %d\tOcupied: %d\n", user->tcpsessions, user->tcpsessions - available(user));
       printf("My clients:\n");
       for(int i = 0; i < user->tcpsessions; i++)
       {
+        if(user->fd_clients[i] == 0)
+          continue;
         printf("%s\n", user->myClients[i]);
       }
-
     }else if(user->state == access_server) //Indicação se a aplicação é a raiz da árvore de escoamento
     {
-      //printf("Stream is flowing\n");
+      printf("Stream is flowing\n");
       printf("I am Groot!\n");
       printf("My access server address: %s:%s\n", user->ipaddr, user->uport);
+      printf("My POP: %s:%s\n",user->ipaddr,user->tport);
+      printf("Max TCP sessions: %d\tOcupied: %d\n", user->tcpsessions, user->tcpsessions - available(user));
       printf("My clients:\n");
       for(int i = 0; i < user->tcpsessions; i++)
       {
+        if(user->fd_clients[i] == 0)
+          continue;
         printf("%s\n", user->myClients[i]);
       }
     }else if(user->state == out) //Fora da árvore
     {
+      printf("Broken Stream\n");
       printf("I am not the root\n");
-      printf("Out of stream tree\n");
+      printf("Not connecter to montante\n");
+      printf("My POP: %s:%s\n",user->ipaddr,user->tport);
+      printf("Max TCP sessions: %d\tOcupied: %d\n", user->tcpsessions, user->tcpsessions - available(user));
+      for(int i = 0; i < user->tcpsessions; i++)
+      {
+        if(user->fd_clients[i] == 0)
+          continue;
+        printf("%s\n", user->myClients[i]);
+      }
+    }else if(user->state == waiting)
+    {
+      printf("Broken Stream\n");
+      printf("I am not the root\n");
+      printf("IP and port of Root a montante: %s\n",user->uproot);
+      printf("My POP: %s:%s\n",user->ipaddr,user->tport);
+      printf("Max TCP sessions: %d\tOcupied: %d\n", user->tcpsessions, user->tcpsessions - available(user));
+      printf("My clients:\n");
+      for(int i = 0; i < user->tcpsessions; i++)
+      {
+        if(user->fd_clients[i] == 0)
+          continue;
+        printf("%s\n", user->myClients[i]);
+      }
     }
+    printf("************\n");
 	}
 	if(strcmp(buffer,"display on\n")==0)
 		user->display = ON;
@@ -607,6 +639,7 @@ int handle_STDINmessage(char *msg, User *user) //STDIN
 	{
     if(user->state == access_server)
     {
+      printf("%s:%s:%s\n",user->stream_name,user->stream_addr,user->stream_port);
       strcpy(buffer,"TREEQUERY\n");
       handle_PEERmessage(buffer,user);
     }else{
