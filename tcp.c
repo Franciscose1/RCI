@@ -120,7 +120,15 @@ void dissipate(char *msg, User *user)
   for(int i = 0; i < user->tcpsessions; i++)
   {
     if(user->fd_clients[i] != 0)
-      send_tcp(msg,user->fd_clients[i]);
+    {
+      if(send_tcp(msg,user->fd_clients[i]) == 0)
+      {
+        printf("Client left?\n");
+        close(user->fd_clients[i]);
+        user->fd_clients[i] = 0;
+        memset(user->myClients[i],'\0',128);
+      }
+    }
   }
   return;
 }

@@ -27,7 +27,7 @@ struct USER{
   int display;
   int detailed_info;
   int synopse;
-  enum {access_server,out,in,waiting} state;
+  enum {access_server,out,waiting,in} state;
   int fd_udp_serv, fd_tcp_serv, fd_tcp_mont, *fd_clients;
   char uproot[128];
   char **myClients, **POPlist;
