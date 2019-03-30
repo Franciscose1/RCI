@@ -41,6 +41,12 @@ int main(int argc, char **argv)
     return 0;
   }
 
+  if(user->synopse)
+  {
+    synopse();
+    return 1;
+  }
+
   //Programa começa fora da àrvore
   user->state = out;
 
@@ -132,7 +138,7 @@ int main(int argc, char **argv)
       {
         //Reinicia o buffer
         memset(buffer,'\0',sizeof(buffer));
-        
+
         if((n=read(user->fd_clients[i],buffer,128))!=0)
         {
           if(n==-1){printf("error: read\n"); clean_exit(user); exit(1);}

@@ -543,8 +543,6 @@ int handle_PEERmessage(char *msg, User *user)
         user->state = out;
       }
     }
-
-
   }else if(user->state == access_server)
   {
     n = strlen(msg);
@@ -591,13 +589,11 @@ int handle_STDINmessage(char *msg, User *user) //STDIN
       {
         printf("%s\n", user->myClients[i]);
       }
-
     }else if(user->state == out) //Fora da árvore
     {
       printf("I am not the root\n");
       printf("Out of stream tree\n");
     }
-
 	}
 	if(strcmp(buffer,"display on\n")==0)
 		user->display = ON;
@@ -609,8 +605,13 @@ int handle_STDINmessage(char *msg, User *user) //STDIN
 		user->detailed_info = OFF;
 	if(strcmp(buffer,"tree\n")==0)
 	{
-		//tree query
-
+    if(user->state == access_server)
+    {
+      strcpy(buffer,"TREEQUERY\n");
+      handle_PEERmessage(buffer,user);
+    }else{
+      printf("I am not the root :(\n");
+    }
 	}
 	if(strcmp(buffer,"exit\n")==0)
 	{
@@ -699,4 +700,10 @@ void clean_exit(User *user)
   close(user->fd_tcp_mont);
 
   return;
+}
+
+//Apresenta sinopse dos comandos
+void synopse()
+{
+  printf("iamroot\n[<streamID>]\n[-i <ipaddr>]\n[-t <tport>]\n[-u <uport>]\n[-s <rsaddr>[<:rsport>]]\n[-p <tcpsessions>]\n[-n <bestpops>]\n[-x <tsecs>]\n[-b <display stream>][-d <detailed info>]\n[-h <this synopse>]\n");
 }

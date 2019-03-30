@@ -60,4 +60,7 @@ int available(User *);
 //Fecha sockets e liberta memória alocada
 void clean_exit(User *);
 
+//Apresenta sinopse da linha de comandos
+void synopse(void);
+
 #endif
