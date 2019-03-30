@@ -490,6 +490,7 @@ int handle_PEERmessage(char *msg, User *user)
       }
       ptr += ncount-1;
       snprintf(ptr,128,"\n");
+      sleep(1);
       if(send_tcp(stream_name,user->fd_tcp_mont) == 0)
       {
         close(user->fd_tcp_mont);
@@ -497,6 +498,7 @@ int handle_PEERmessage(char *msg, User *user)
         dissipate("BS\n",user);
       }
     }else{
+      sleep(1);
       dissipate(msg,user);
     }
 
@@ -533,10 +535,12 @@ int handle_PEERmessage(char *msg, User *user)
         printf(" %s:%s",ipaddr,port);
         snprintf(stream_name,128,"TQ %s:%s\n",ipaddr,port);
         dissipate(stream_name,user);
+        sleep(1);
       }
       printf(")\n");
     }else if(user->state == in){
       if(user->detailed_info == ON) write(1,msg,strlen(msg));
+      sleep(1);
       if(send_tcp(msg,user->fd_tcp_mont) == 0)
       {
         close(user->fd_tcp_mont);
