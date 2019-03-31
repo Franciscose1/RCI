@@ -27,7 +27,7 @@ struct USER{
   int display;
   int detailed_info;
   int synopse;
-  enum {access_server,out,in,waiting} state;
+  enum {access_server,out,waiting,in} state;
   int fd_udp_serv, fd_tcp_serv, fd_tcp_mont, *fd_clients;
   char uproot[128];
   char **myClients, **POPlist;
@@ -60,5 +60,8 @@ int available(User *);
 
 //Fecha sockets e liberta memória alocada
 void clean_exit(User *);
+
+//Apresenta sinopse da linha de comandos
+void synopse(void);
 
 #endif
