@@ -216,7 +216,7 @@ void msg_in_protocol(char *msg, char *label, User *user)
     snprintf(msg, 128, "NP %s:%s\n", user->ipaddr, user->tport);
     return;
   }
-  }
+  
 }
 
 int handle_RSmessage(char *msg, User *user) //Servidor de Raizes
@@ -315,47 +315,54 @@ int handle_ASmessage(char *msg, User *user) //Servidor de Acesso
 }
 
 
-int handle_PACKETmessage(char *msg, char *packet User *user, int *nbytesleft,int totalbytes, int bytesread)
+int handle_PACKETmessage(char *msg, char *packet, User *user, int *nbytesleft,int totalbytes, int bytesread)
 {
-	int retorno;
+	int retorno,nw,n;
+	int pos;
+	char *ptr;
 	//Caso o packet completo já esteja a meio e esteja o resto dentro do pacote que recebeu.
-	if(nbytesleft <=bytesread ){
-		memcpy(packet+(totalbytes-nbytesleft),buffer,nbytesleft);
+	if(*nbytesleft <=bytesread ){
+		pos=(totalbytes-*nbytesleft);
+		memcpy(packet+pos,msg,*nbytesleft);
 		ptr=&packet[0];
         while(totalbytes>0)
         {
-          if((nw=write(1,ptr,nbytes))<=0){printf("error: write\n"); exit(1);}
+          if((nw=write(1,ptr,totalbytes))<=0){printf("error: write\n"); exit(1);}
           totalbytes-=nw; ptr+=nw;
         }
         
         //Transforma em modo protocolo
         char *msg = (char *)malloc(totalbytes+7);
-		snprintf(msg, 128, "DA %4.4h\n",totalbytes);
+		snprintf(msg, 128, "DA %04X\n",totalbytes);//Hexadecimal
 		memcpy(msg+7,packet,totalbytes);
 
 		for(n=0; n < user->tcpsessions; n++) //Envia para os a montante
 			if(user->fd_clients[n] != 0)
-				if(send_tcp(msg,user->fd_clients[n],nbytes+7) == 0) return 0;
+				if(send_tcp(msg,user->fd_clients[n]) == 0) return 0;
 		free(msg);
-		retorno=nbytesleft;	
+		retorno=*nbytesleft;	
 		nbytesleft=0;
 		//Retorna o numero de bytes que leu do pacote para poder saber onde continuar a ler o resto do pacote
 		return(retorno);
 	}
 	//Caso o packet completo já esteja a meio e só esteja outra parte dentro do pacote que recebeu.
-	if(nbytesleft >bytesread ){
-		memcpy(packet+(totalbytes-nbytesleft),buffer,bytesread);
+	if(*nbytesleft >bytesread ){
+		pos=(totalbytes-*nbytesleft);
+		memcpy(packet+pos,msg,bytesread);
 		nbytesleft-=bytesread;
 		return(1);
 	}
 	
 	
 
-
+return(1);
 }
 
 int handle_SOURCEmessage(char *msg, User *user)
 {
+	int nw,n;
+	int nbytes;
+	char *ptr;
 	char buffer[128] = {'\0'};
 	if((nbytes=read(user->fd_tcp_mont,buffer,128))!=0)
       {
@@ -371,15 +378,16 @@ int handle_SOURCEmessage(char *msg, User *user)
         
         //Transforma em modo protocolo
         char *msg = (char *)malloc(nbytes+7);
-		snprintf(msg, 128, "DA %4.4h\n",nbytes);
+		snprintf(msg, 128, "DA %04X\n",nbytes);
 		memcpy(msg+7,buffer,nbytes);
 
 		for(n=0; n < user->tcpsessions; n++) //Envia para os a montante
 			if(user->fd_clients[n] != 0)
-				if(send_tcp(msg,user->fd_clients[n],nbytes+7) == 0) return 0;
+				if(send_tcp(msg,user->fd_clients[n]) == 0) return 0;
 		free(msg);	
 
 	}
+return(1);	
 }
 int handle_R2Rmessage(char *msg, User *user) //iamroot to iamroot
 {
@@ -523,7 +531,7 @@ int handle_R2Rmessage(char *msg, User *user) //iamroot to iamroot
   }
   return 1;
 }
-}
+
 
 int handle_STDINmessage(char *msg, User *user) //STDIN
 {
