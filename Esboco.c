@@ -17,7 +17,7 @@ if(FD_ISSET(user->fd_tcp_mont,&rfds) && user->state != out)     //Fonte/Acima
 				nbytes=handle_PACKETmessage(buffer,packet,user,&packet_left,&packet_total,n);
 				if(nbytes=1) //O pacote ainda não foi todo recebido.
 				{
-					nbytes_avanco=o;
+					bytes_avanco=o;
 					n=0;
 				}
 				if(nbytes>1)
@@ -43,14 +43,14 @@ if(FD_ISSET(user->fd_tcp_mont,&rfds) && user->state != out)     //Fonte/Acima
 						bytes_avanco=n;
 						break;
 					}
-					shift_left_buffer(buffer,nbytes,3);
+					shift_left_buffer(buffer,3,n);
 					sscanf(ptr,"%X",&packet_total);
 					packet_left=packet_total;
 					shift_left_buffer(buffer,nbytes,4);
 					nbytes=handle_PACKETmessage(buffer,packet,user,&packet_left,&packet_total,n);
 					if(nbytes=1) //O pacote ainda não foi todo recebido.
 					{
-						nbytes_avanco=o;
+						bytes_avanco=o;
 						n=0;
 					}
 					if(nbytes>1)
@@ -58,47 +58,36 @@ if(FD_ISSET(user->fd_tcp_mont,&rfds) && user->state != out)     //Fonte/Acima
 						shift_left_buffer(buffer,nbytes,n);
 						n=n-nbytes;
 					}
-				
-			
-			int str_to_msgID(char *ptr, char *msgID)
-			{
-			  int n = 0, ncount = 0;
-
-			  if(sscanf(ptr, "%s%n", msgID, &n)==1)
-			  {
-				ptr += n; /* advance the pointer by the number of characters read */
-				ncount += n;
-				if ((*ptr != ' ')&&(*ptr != '\n')&&(*ptr != '\0'))
-				{
-				  printf("Incompatible with protocol\n");
-				  return 0;
 				}
-				ncount++;
-			  }else{
-				printf("Failed to read msg_ID\n");
-				return 0;
-			  }
-			  return ncount;
-			}
-						
-			
-			
-			
-				
-				
-					
-					
+				ptr = msg; if((ncount = str_to_msgID(ptr,msgID)) == 0){ //int ncount;
+					bytes_avanco=ncount;
+					break;
+				}
+				memcpy(aux,msg,ncount); //char *aux;	
+				shift_left_buffer(buffer,ncount,n);
+				n=n-ncount;
+				if(handle_PEERmessage(aux,user) == 0){printf("Unable to process PEER message\n"); clean_exit(user); exit(1);}		
 			}
 					
-			   
-			printf("%s\n", buffer);
-			if(n==-1){printf("error: read\n"); clean_exit(user); exit(1);}
-			if(handle_PEERmessage(buffer,user) == 0){printf("Unable to process PEER message\n"); clean_exit(user); exit(1);}
 		  }else{
 			//Montante saiu
 			close(user->fd_tcp_mont);
 			user->state = out;
 			dissipate("BS\n",user);
 		  }
+}
+ 
+
+int shift_left_buffer(char *buffer,int nbytes,int n)
+{
+	
+	/* shifting array elements */
+  
+    for(i=0;i<n-nbytes-1;i++)
+    {
+        a[i]=a[nbytes+i];
+    }
+    a[n-nbytes-1] = { '\0' };
+	
 }
  
