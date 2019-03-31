@@ -3,19 +3,21 @@
 #include "functions.h"
 #include "udp.h"
 #include "tcp.h"
-
 #include <time.h>
+
+#define POPQUERY_TIME 120
 
 int main(int argc, char **argv)
 {
   int maxfd, counter, newfd;
+  int bytes_avanco,packet_left,nbytes,packet_total,a,ncount;
   char buffer[128] = {'\0'};
+  char packet[1024]={'\0'};
+  char msgID[128] = {'\0'};
   fd_set rfds;
   int n,i,tries;
-  int nbytesleft=0;
-  int n,nw,i;
   char *ptr;
-  struct timeval tv = {30, 0};
+  struct timeval tv = {10, 0};
 
   //Timer para refrescar raiz no servidor de raizes e/ou refrescar lista de POPs
   time_t timer_start = time(NULL);
@@ -38,7 +40,14 @@ int main(int argc, char **argv)
     //Apresenta lista de streams disponiveis caso nenhum tenha sido especificado
     strcpy(buffer,"DUMP\n");
     reach_udp(user->rsaddr,user->rsport,buffer);
+    if(user->detailed_info == ON) write(1,buffer,strlen(buffer));
     return 0;
+  }
+
+  if(user->synopse)
+  {
+    synopse();
+    return 1;
   }
 
   //Programa começa fora da àrvore
@@ -50,7 +59,7 @@ int main(int argc, char **argv)
     memset(buffer,'\0',sizeof(buffer));
 
     //Reinicia o timeout
-    tv.tv_sec = 30;
+    tv.tv_sec = 10;
     tv.tv_usec = 0;
 
     //Reinicia os vetor de file descriptors
@@ -87,7 +96,7 @@ int main(int argc, char **argv)
       FD_SET(user->fd_udp_serv,&rfds);maxfd=max(maxfd,user->fd_udp_serv);  //Servidor de Acesso
     }
     //Arma descritores para ligações a jusante
-    if((user->state == in)||(user->state == access_server))
+    if(user->state != out)
     {
       FD_SET(user->fd_tcp_serv,&rfds);maxfd=max(maxfd,user->fd_tcp_serv);
       for(i=0;i<user->tcpsessions;i++)
@@ -104,7 +113,7 @@ int main(int argc, char **argv)
     {
       recieveNsend_udp(user->fd_udp_serv, buffer, user);
     }
-    if(FD_ISSET(user->fd_tcp_serv,&rfds) && user->state != waiting) //Clientes/Jusante
+    if(FD_ISSET(user->fd_tcp_serv,&rfds) && user->state != out) //Clientes/Jusante
     {
       if(new_connection(user) == 0)
       {
@@ -122,37 +131,90 @@ int main(int argc, char **argv)
 			}
 		}
 
-		if((bytesread=read(user->fd_tcp_mont,buffer,128))!=0)
-      {
-			if(nbytesleft > 0)
+		if((n=read(user->fd_tcp_mont,buffer+bytes_avanco,128))!=0)
+		{
+			if(packet_left > 0)
 			{
-				//retorno=ponto do buffer onde está. nbytesleft=bytes que faltam para o packet. totalbytes= tamanho total do packet. bytesread=retorno da função read.
-			  if(retorno=handle_PACKETmessage(buffer,packet,user,&nbytesleft,&totalbytes,bytesread)==0)
-			  {//retorno=0 fim do buffer
-				printf("end of buffer");
-				continue
-			  }
-			  ptr=&packet[retorno];			  
+				nbytes=handle_PACKETmessage(buffer,packet,user,&packet_left,packet_total,n);
+				if(nbytes==1) //O pacote ainda não foi todo recebido.
+				{
+					bytes_avanco=0;
+					n=0;
+				}
+				if(nbytes>1)
+				{
+					shift_left_buffer(buffer,nbytes,n);
+					n=n-nbytes;
+				}
 			}
-
-		   
-        printf("%s\n", buffer);
-        if(n==-1){printf("error: read\n"); clean_exit(user); exit(1);}
-        if(handle_PEERmessage(buffer,user) == 0){printf("Unable to process PEER message\n"); clean_exit(user); exit(1);}
-      }else{
-        //Montante saiu
-        close(user->fd_tcp_mont);
-        user->state = out;
-        dissipate("BS\n",user);
-      }
+				
+			while(n >0)
+			{
+				
+				if(sscanf(buffer, "%s%n", msgID, &a)==0)
+				{
+					printf("Failed to read msg_ID\n");
+					return 0;
+				}
+				
+				if(strcmp(msgID,"DA")==0)
+				{	
+					if(n<7)
+					{
+						bytes_avanco=n;
+						break;
+					}
+					shift_left_buffer(buffer,3,n);
+					sscanf(ptr,"%X",&packet_total);
+					packet_left=packet_total;
+					
+					shift_left_buffer(buffer,nbytes,4);
+					nbytes=handle_PACKETmessage(buffer,packet,user,&packet_left,packet_total,n);
+					if(nbytes==1) //O pacote ainda não foi todo recebido.
+					{
+						bytes_avanco=0;
+						n=0;
+					}
+					if(nbytes>1)
+					{
+						shift_left_buffer(buffer,nbytes,n);
+						n=n-nbytes;
+					}
+				}
+				
+				
+				ptr = buffer; if((ncount = str_to_msgID(ptr,msgID)) == 0){ //int ncount;
+					bytes_avanco=ncount;
+					break;
+				}
+				char aux[128];
+				memcpy(aux,buffer,ncount); //char *aux;	
+				shift_left_buffer(buffer,ncount,n);
+				n=n-ncount;
+				if(handle_PEERmessage(aux,user) == 0){printf("Unable to process PEER message\n"); clean_exit(user); exit(1);}		
+			}
+					
+		  }else{
+			//Montante saiu
+			close(user->fd_tcp_mont);
+			user->state = out;
+			dissipate("BS\n",user);
+		  }
     }
+    
+    
+    
+    
+    
     for(i=0;i<user->tcpsessions;i++)
     {
       if(FD_ISSET(user->fd_clients[i],&rfds) && user->fd_clients[i] != 0)
       {
+        //Reinicia o buffer
+        memset(buffer,'\0',sizeof(buffer));
+
         if((n=read(user->fd_clients[i],buffer,128))!=0)
         {
-          printf("%s\n", buffer);
           if(n==-1){printf("error: read\n"); clean_exit(user); exit(1);}
           if(handle_PEERmessage(buffer,user) == 0){printf("Unable to process PEER message\n"); clean_exit(user); exit(1);}
         }else{
@@ -177,20 +239,30 @@ int main(int argc, char **argv)
     //Timer para o access_server
     if(user->state == access_server)
     {
-      if(time(NULL)-timer_start > 120 || counter == 0)
+      if(time(NULL)-timer_start > user->tsecs)
       {
-        //Reinicia o timer
-        timer_start = time(NULL);
-
         //Refresca servidor de raizes
         msg_in_protocol(buffer,"WHOISROOT",user);
         reach_udp(user->rsaddr,user->rsport,buffer);
+        if(user->detailed_info == ON) write(1,buffer,strlen(buffer));
 
-        //Faz POPQUERY para refrescar POPs
-        strcpy(buffer,"POPQUERY\n");
-        handle_PEERmessage(buffer,user);
+        if(time(NULL)-timer_start > POPQUERY_TIME)
+        {
+          //Faz POPQUERY para refrescar POPs
+          strcpy(buffer,"POPQUERY\n");
+          handle_PEERmessage(buffer,user);
+        }
+
+        //Reinicia o timer
+        timer_start = time(NULL);
       }
-
+    }else if(user->state == waiting)
+    {
+      if(counter == 0)
+      {
+        close(user->fd_tcp_mont);
+        user->state = out;
+      }
     }
   }//while(1)
 
@@ -203,3 +275,9 @@ int main(int argc, char **argv)
 //./iamroot grupo44:192.168.1.67:57000 -i 192.168.1.67 -u 58001 -t 58001
 
 //cd /Users/pedroflores/Documents/IST/5Ano2Sem/RCI/ProjectRepository
+
+/* Duvidas
+1 - Se o descritor não estiver armado e outro fizer um write, o que é que o
+write retorna?
+2 - Se der para fazer write, quando armar o descritor ele vai ser logo ativo pelo select?
+*/
