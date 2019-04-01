@@ -225,6 +225,38 @@ void msg_in_protocol(char *msg, char *label, User *user)
   }
 }
 
+int handle_SOURCEmessage(char *msg, User *user)
+{
+	int nw,n;
+	int nbytes;
+	char *ptr;
+	char buffer[128] = {'\0'};
+	if((nbytes=read(user->fd_tcp_mont,buffer,128))!=0)
+      {
+		  
+        if(nbytes==-1){printf("error: read\n"); exit(1);}
+		ptr=&buffer[0];
+        while(nbytes>0)
+        {
+          if((nw=write(1,ptr,nbytes))<=0){printf("error: write\n"); exit(1);}
+          nbytes-=nw; ptr+=nw;
+        }
+        
+        
+        //Transforma em modo protocolo
+        char *msg = (char *)malloc(nbytes+7);
+		snprintf(msg, 128, "DA %04X\n",nbytes);
+		memcpy(msg+7,buffer,nbytes);
+
+		for(n=0; n < user->tcpsessions; n++) //Envia para os a montante
+			if(user->fd_clients[n] != 0)
+				if(send_tcp(msg,user->fd_clients[n]) == 0) return 0;
+		free(msg);	
+
+	}
+return(1);	
+}
+
 int handle_RSmessage(char *msg, User *user) //Servidor de Raizes
 {
   char *ptr;
@@ -324,6 +356,47 @@ int handle_ASmessage(char *msg, User *user) //Servidor de Acesso
   }else{printf("AS Message not in protocol\n"); return 0;}
 
   return 1;
+}
+
+int handle_PACKETmessage(char *msg, char *packet, User *user, int *nbytesleft,int totalbytes, int bytesread)
+{
+	int retorno,nw,n;
+	int pos;
+	char *ptr;
+	//Caso o packet completo já esteja a meio e esteja o resto dentro do pacote que recebeu.
+	if(*nbytesleft <=bytesread ){
+		pos=(totalbytes-*nbytesleft);
+		memcpy(packet+pos,msg,*nbytesleft);
+		ptr=&packet[0];
+        while(totalbytes>0)
+        {
+          if((nw=write(1,ptr,totalbytes))<=0){printf("error: write\n"); exit(1);}
+          totalbytes-=nw; ptr+=nw;
+        }
+        
+        //Transforma em modo protocolo
+        char *msg = (char *)malloc(totalbytes+7);
+		snprintf(msg, 128, "DA %04X\n",totalbytes);//Hexadecimal
+		memcpy(msg+7,packet,totalbytes);
+
+		for(n=0; n < user->tcpsessions; n++) //Envia para os a montante
+			if(user->fd_clients[n] != 0)
+				if(send_tcp(msg,user->fd_clients[n]) == 0) return 0;
+		free(msg);
+		retorno=*nbytesleft;	
+		nbytesleft=0;
+		//Retorna o numero de bytes que leu do pacote para poder saber onde continuar a ler o resto do pacote
+		return(retorno);
+	}
+	//Caso o packet completo já esteja a meio e só esteja outra parte dentro do pacote que recebeu.
+	if(*nbytesleft >bytesread ){
+		pos=(totalbytes-*nbytesleft);
+		memcpy(packet+pos,msg,bytesread);
+		nbytesleft-=bytesread;
+		return(1);
+	}
+	
+return(1);
 }
 
 int handle_PEERmessage(char *msg, User *user)
@@ -743,4 +816,15 @@ void clean_exit(User *user)
 void synopse()
 {
   printf("iamroot\n[<streamID>]\n[-i <ipaddr>]\n[-t <tport>]\n[-u <uport>]\n[-s <rsaddr>[<:rsport>]]\n[-p <tcpsessions>]\n[-n <bestpops>]\n[-x <tsecs>]\n[-b <display stream>][-d <detailed info>]\n[-h <this synopse>]\n");
+}
+
+int shift_left_buffer(char *buffer,int nbytes,int n)
+{
+	
+	char *aux[sizeof(buffer)];
+	/* shifting array elements */
+	
+	memcpy(aux,buffer+n,nbytes-n);
+	memcpy(buffer,aux,nbytes-n);
+	return(1);
 }

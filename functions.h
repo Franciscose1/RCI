@@ -48,8 +48,11 @@ void msg_in_protocol(char *, char *, User *);
 int handle_RSmessage(char *, User *);
 int handle_ASmessage(char *, User *);
 int handle_STDINmessage(char *, User *);
-int handle_R2Rmessage(char *msg, User *user);
+int handle_SOURCEmessage(char *msg, User *user);
+int handle_PACKETmessage(char *msg, char *packet, User *user, int *nbytesleft,int totalbytes, int bytesread);
 int handle_PEERmessage(char *, User *);
+//Cenas
+int shift_left_buffer(char *buffer,int nbytes,int n);
 
 //Mecanismo de adesão à árvore
 int join_tree(User *);
