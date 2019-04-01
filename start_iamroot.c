@@ -129,6 +129,7 @@ int main(int argc, char **argv)
 				printf("Problems with the source");
 				return 0;
 			}
+			continue;
 		}
 
 		if((n=read(user->fd_tcp_mont,buffer+bytes_avanco,128))!=0)
@@ -162,7 +163,7 @@ int main(int argc, char **argv)
 					if(n<7)
 					{
 						bytes_avanco=n;
-						break;
+						continue;
 					}
 					shift_left_buffer(buffer,3,n);
 					sscanf(ptr,"%X",&packet_total);
@@ -185,7 +186,7 @@ int main(int argc, char **argv)
 				
 				ptr = buffer; if((ncount = str_to_msgID(ptr,msgID)) == 0){ //int ncount;
 					bytes_avanco=ncount;
-					break;
+					continue;
 				}
 				char aux[128];
 				memcpy(aux,buffer,ncount); //char *aux;	
@@ -276,6 +277,11 @@ int main(int argc, char **argv)
 
 // ./iamroot grupo44:192.136.138.142:59000 -i 194.210.156.33 -d -b -x 30
 // ./iamroot grupo44:192.136.138.142:59000 -i 194.210.156.33 -d -b -x 30 -u 58001 -t 58001
+// nc -l 57000
+
+
+
+
 //cd /Users/pedroflores/Documents/IST/5Ano2Sem/RCI/ProjectRepository
 
 /* Duvidas
