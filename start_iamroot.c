@@ -274,6 +274,8 @@ int main(int argc, char **argv)
 //My Fonte
 //./iamroot grupo44:192.168.1.67:57000 -i 192.168.1.67 -u 58001 -t 58001
 
+// ./iamroot grupo44:192.136.138.142:59000 -i 194.210.156.33 -d -b -x 30
+// ./iamroot grupo44:192.136.138.142:59000 -i 194.210.156.33 -d -b -x 30 -u 58001 -t 58001
 //cd /Users/pedroflores/Documents/IST/5Ano2Sem/RCI/ProjectRepository
 
 /* Duvidas
