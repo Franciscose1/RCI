@@ -10,7 +10,7 @@
 int main(int argc, char **argv)
 {
   int maxfd, counter, newfd;
-  int bytes_avanco,packet_left,nbytes,packet_total,a,ncount;
+  int bytes_avanco=0,packet_left=0,nbytes,packet_total,a,ncount;
   char buffer[128] = {'\0'};
   char packet[1024]={'\0'};
   char msgID[128] = {'\0'};
@@ -54,6 +54,7 @@ int main(int argc, char **argv)
   user->state = out;
 
   while(1){
+	 
 
     //Reinicia o buffer
     memset(buffer,'\0',sizeof(buffer));
@@ -123,32 +124,40 @@ int main(int argc, char **argv)
     }
     if(FD_ISSET(user->fd_tcp_mont,&rfds) && user->state != out)     //Fonte/Acima
     {
+		
+		
+		
 		if(user->state==access_server)//Caso seja o root, recebe da fonte em formato fora do protocolo
-		{
-			if(handle_SOURCEmessage(buffer,user)==0){
+		{   
+			printf("EU SOU O ACCESS SERVER!\n");
+			if(handle_SOURCEmessage(user)==0){
 				printf("Problems with the source");
 				return 0;
 			}
 			continue;
 		}
-
+		
+		
+		
 		if((n=read(user->fd_tcp_mont,buffer+bytes_avanco,128))!=0)
 		{
-			if(packet_left > 0)
-			{
-				nbytes=handle_PACKETmessage(buffer,packet,user,&packet_left,packet_total,n);
-				if(nbytes==1) //O pacote ainda não foi todo recebido.
-				{
-					bytes_avanco=0;
-					n=0;
-				}
-				if(nbytes>1)
-				{
-					shift_left_buffer(buffer,nbytes,n);
-					n=n-nbytes;
-				}
-			}
+			
+			//if(packet_left > 0)
+			//{
+				//nbytes=handle_PACKETmessage(buffer,packet,user,&packet_left,packet_total,n);
+				//if(nbytes==1) //O pacote ainda não foi todo recebido.
+				//{
+					//bytes_avanco=0;
+					//n=0;
+				//}
+				//if(nbytes>1)
+				//{
+					//shift_left_buffer(buffer,nbytes,n);
+					//n=n-nbytes;
+				//}
+			//}
 				
+
 			while(n >0)
 			{
 				
@@ -157,19 +166,27 @@ int main(int argc, char **argv)
 					printf("Failed to read msg_ID\n");
 					return 0;
 				}
-				
+				printf("Buffer has:%s",buffer);
+				printf("String is %s\n",msgID);    ///////////////////////////////////
 				if(strcmp(msgID,"DA")==0)
 				{	
 					if(n<7)
 					{
 						bytes_avanco=n;
-						continue;
+						break;
 					}
+					printf("Buffer antes de shift: %s\n",buffer);///////////////////////////////////
 					shift_left_buffer(buffer,3,n);
-					sscanf(ptr,"%X",&packet_total);
+					n=n-3;
+					printf("Buffer depois de shift2: %s\n",buffer);///////////////////////////////////
+					sscanf(buffer,"%X",&packet_total);
 					packet_left=packet_total;
+					printf("Size of packet:%d\n",packet_total);
 					
-					shift_left_buffer(buffer,nbytes,4);
+					shift_left_buffer(buffer,5,n);
+					n=n-5;
+					//isto
+					printf("Buffer depois de shift3: %s\n",buffer);///////////////////////////////////
 					nbytes=handle_PACKETmessage(buffer,packet,user,&packet_left,packet_total,n);
 					if(nbytes==1) //O pacote ainda não foi todo recebido.
 					{
@@ -184,9 +201,14 @@ int main(int argc, char **argv)
 				}
 				
 				
-				ptr = buffer; if((ncount = str_to_msgID(ptr,msgID)) == 0){ //int ncount;
+				
+				
+				
+				ptr = buffer; 
+				
+				if(find_complete_message(ptr,msgID, &ncount) == 0){ 
 					bytes_avanco=ncount;
-					continue;
+					break;
 				}
 				char aux[128];
 				memcpy(aux,buffer,ncount); //char *aux;	
@@ -196,6 +218,7 @@ int main(int argc, char **argv)
 			}
 					
 		  }else{
+			 
 			//Montante saiu
 			close(user->fd_tcp_mont);
 			user->state = out;
@@ -275,9 +298,9 @@ int main(int argc, char **argv)
 //My Fonte
 //./iamroot grupo44:192.168.1.67:57000 -i 192.168.1.67 -u 58001 -t 58001
 
-// ./iamroot grupo44:192.136.138.142:59000 -i 194.210.156.33 -d -b -x 30
-// ./iamroot grupo44:192.136.138.142:59000 -i 194.210.156.33 -d -b -x 30 -u 58001 -t 58001
-// nc -l 57000
+// ./iamroot grupo44:192.136.138.142:59000 -i 194.210.157.158 -d -b -x 30
+// ./iamroot grupo44:194.210.157.158:57000 -i 194.210.156.33 -d -b -x 30 -u 58001 -t 58001
+// nc -l 57000 
 
 
 
