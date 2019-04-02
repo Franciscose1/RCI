@@ -407,12 +407,9 @@ int handle_PACKETmessage(char *msg, char *packet, User *user, int *nbytesleft,in
 		snprintf(aux,totalbytes+8, "DA %04X\n",totalbytes);
 		printf("msg is:%s\n",msg);
 		snprintf(aux+8,totalbytes+8, "%s",packet);
-		//memcpy(msg+8,buffer,nbytes);
+		
 		printf("msg is:%s\n",msg);
-        
-        //char *msg = (char *)malloc(totalbytes+7);
-		//snprintf(msg, 8, "DA %04X\n",totalbytes);//Hexadecimal
-		//memcpy(msg+7,packet,totalbytes);
+
 
 		for(n=0; n < user->tcpsessions; n++) //Envia para os a montante
 			if(user->fd_clients[n] != 0)
@@ -442,7 +439,8 @@ int handle_PEERmessage(char *msg, User *user)
   char stream_name[128] = {'\0'};
   char ipaddr[128] = {'\0'};
   char port[128] = {'\0'};
-
+	
+	//printf("Cheguei a 4");
   ptr = msg; if((ncount = str_to_msgID(ptr,msgID)) == 0) return 0;
   ptr += ncount;
 

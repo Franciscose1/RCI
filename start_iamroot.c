@@ -141,7 +141,7 @@ int main(int argc, char **argv)
 		
 		if((n=read(user->fd_tcp_mont,buffer+bytes_avanco,128))!=0)
 		{
-			
+			printf("n=%d\n",n);
 			//if(packet_left > 0)
 			//{
 				//nbytes=handle_PACKETmessage(buffer,packet,user,&packet_left,packet_total,n);
@@ -175,10 +175,10 @@ int main(int argc, char **argv)
 						bytes_avanco=n;
 						break;
 					}
-					printf("Buffer antes de shift: %s\n",buffer);///////////////////////////////////
+					//printf("Buffer antes de shift: %s\n",buffer);///////////////////////////////////
 					shift_left_buffer(buffer,3,n);
 					n=n-3;
-					printf("Buffer depois de shift2: %s\n",buffer);///////////////////////////////////
+					//printf("Buffer depois de shift2: %s\n",buffer);///////////////////////////////////
 					sscanf(buffer,"%X",&packet_total);
 					packet_left=packet_total;
 					printf("Size of packet:%d\n",packet_total);
@@ -186,7 +186,7 @@ int main(int argc, char **argv)
 					shift_left_buffer(buffer,5,n);
 					n=n-5;
 					//isto
-					printf("Buffer depois de shift3: %s\n",buffer);///////////////////////////////////
+					//printf("Buffer depois de shift3: %s\n",buffer);///////////////////////////////////
 					nbytes=handle_PACKETmessage(buffer,packet,user,&packet_left,packet_total,n);
 					if(nbytes==1) //O pacote ainda não foi todo recebido.
 					{
@@ -196,18 +196,17 @@ int main(int argc, char **argv)
 					if(nbytes>1)
 					{
 						shift_left_buffer(buffer,nbytes,n);
+						printf("Buffer has:%s\n and nbytes=%d\n",buffer,nbytes);
 						n=n-nbytes;
+						printf("nis is:%d\n",n);
+						continue;
 					}
 				}
-				
-				
-				
-				
-				
+				printf("Cheguei a 1\n");
 				ptr = buffer; 
-				
 				if(find_complete_message(ptr,msgID, &ncount) == 0){ 
 					bytes_avanco=ncount;
+					printf("Cheguei a 2 e deixo bytes de avanço: %d\n",bytes_avanco);
 					break;
 				}
 				char aux[128];
