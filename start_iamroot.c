@@ -141,7 +141,7 @@ int main(int argc, char **argv)
 		if((n=read(user->fd_tcp_mont,buffer+bytes_avanco,128))!=0)
 		{
 			bytes_avanco=0;
-			printf("\n n=%d and buffer has: %s\n",n,buffer);
+			//printf("\n n=%d and buffer has: %s\n",n,buffer);				/////////////////////////////
 			if(packet_left > 0)
 			{
 				printf("Temos um pacote incompleto\n");
@@ -168,7 +168,7 @@ int main(int argc, char **argv)
 					return 0;
 				}
 				//printf("Buffer has:%s",buffer); 		/////////////////////////////
-				printf("String is %s\n",msgID);    ///////////////////////////////////
+				//printf("String is %s\n",msgID);    ///////////////////////////////////
 				if(strcmp(msgID,"DA")==0)
 				{	
 					if(n<7)
@@ -201,23 +201,23 @@ int main(int argc, char **argv)
 						shift_left_buffer(buffer,nbytes,n);
 						//printf("202:Buffer has:%s\n and nbytes=%d\n",buffer,nbytes);/////////////////////////////
 						n=n-nbytes;
-						printf("204:nis is:%d and packet_left=%d\n",n,packet_left);								/////////////////////////////
+						//printf("204:nis is:%d and packet_left=%d\n",n,packet_left);								/////////////////////////////
 						continue;
 					}
 				}
-				printf("208:Cheguei a 1\n");										/////////////////////////////
+				//printf("208:Cheguei a 1\n");										/////////////////////////////
 				ptr = buffer; 
 				if(find_complete_message(ptr,msgID, &ncount) == 0){ 
 					bytes_avanco=ncount;
-					printf("212:Cheguei a 2 e deixo bytes de avanço: %d\n",bytes_avanco);
+					//printf("212:Cheguei a 2 e deixo bytes de avanço: %d\n",bytes_avanco); /////////////////////////////
 					break;
 				}
-				printf("215\n");
+				//printf("215\n");						/////////////////////////////
 				char aux[128]= {'\0'};;
 				memcpy(aux,buffer,ncount); //char *aux;	
 				shift_left_buffer(buffer,ncount,n);
 				n=n-ncount;
-				printf("220\n");
+				//printf("220\n");					/////////////////////////////
 				if(handle_PEERmessage(aux,user) == 0){printf("Unable to process PEER message\n"); clean_exit(user); exit(1);}		
 			}
 					

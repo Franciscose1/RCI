@@ -409,20 +409,18 @@ int handle_PACKETmessage(char *msg, char *packet, User *user, int *nbytesleft,in
         char aux[totalbytes+9];
         aux[0] = '\0';
 		snprintf(aux,totalbytes+8, "DA %04X\n",totalbytes);
-		printf("msg is:%s\n",msg);
+		//printf("msg is:%s\n",msg);
 		snprintf(aux+8,totalbytes+8, "%s",packet);
 		
-		printf("msg is:%s\n",msg);
+		//printf("msg is:%s\n",msg);
 
 
 		for(n=0; n < user->tcpsessions; n++) //Envia para os a montante
 			if(user->fd_clients[n] != 0)
-				if(send_tcp(aux,user->fd_clients[n]) == 0) return 0;
-		printf("Before free\n");		
+				if(send_tcp(aux,user->fd_clients[n]) == 0) return 0;		
 		//free(aux);
 		retorno=*nbytesleft;	
 		*nbytesleft=0;
-		printf("After free\n");
 		//Retorna o numero de bytes que leu do pacote para poder saber onde continuar a ler o resto do pacote
 		return(retorno);
 	}
