@@ -129,7 +129,6 @@ int main(int argc, char **argv)
 		
 		if(user->state==access_server)//Caso seja o root, recebe da fonte em formato fora do protocolo
 		{   
-			printf("EU SOU O ACCESS SERVER!\n");
 			if(handle_SOURCEmessage(user)==0){
 				printf("Problems with the source");
 				return 0;
@@ -141,21 +140,23 @@ int main(int argc, char **argv)
 		
 		if((n=read(user->fd_tcp_mont,buffer+bytes_avanco,128))!=0)
 		{
-			printf("n=%d\n",n);
-			//if(packet_left > 0)
-			//{
-				//nbytes=handle_PACKETmessage(buffer,packet,user,&packet_left,packet_total,n);
-				//if(nbytes==1) //O pacote ainda não foi todo recebido.
-				//{
-					//bytes_avanco=0;
-					//n=0;
-				//}
-				//if(nbytes>1)
-				//{
-					//shift_left_buffer(buffer,nbytes,n);
-					//n=n-nbytes;
-				//}
-			//}
+			bytes_avanco=0;
+			printf("\n n=%d and buffer has: %s\n",n,buffer);
+			if(packet_left > 0)
+			{
+				printf("Temos um pacote incompleto\n");
+				nbytes=handle_PACKETmessage(buffer,packet,user,&packet_left,packet_total,n);
+				if(nbytes==1) //O pacote ainda não foi todo recebido.
+				{
+					bytes_avanco=0;
+					n=0;
+				}
+				if(nbytes>1)
+				{
+					shift_left_buffer(buffer,nbytes,n);
+					n=n-nbytes;
+				}
+			}
 				
 
 			while(n >0)
@@ -166,7 +167,7 @@ int main(int argc, char **argv)
 					printf("Failed to read msg_ID\n");
 					return 0;
 				}
-				printf("Buffer has:%s",buffer);
+				//printf("Buffer has:%s",buffer); 		/////////////////////////////
 				printf("String is %s\n",msgID);    ///////////////////////////////////
 				if(strcmp(msgID,"DA")==0)
 				{	
@@ -181,7 +182,7 @@ int main(int argc, char **argv)
 					//printf("Buffer depois de shift2: %s\n",buffer);///////////////////////////////////
 					sscanf(buffer,"%X",&packet_total);
 					packet_left=packet_total;
-					printf("Size of packet:%d\n",packet_total);
+					//printf("Size of packet:%d\n",packet_total);////////////////////////////////////////
 					
 					shift_left_buffer(buffer,5,n);
 					n=n-5;
@@ -190,29 +191,33 @@ int main(int argc, char **argv)
 					nbytes=handle_PACKETmessage(buffer,packet,user,&packet_left,packet_total,n);
 					if(nbytes==1) //O pacote ainda não foi todo recebido.
 					{
+						printf("O pacote não foi todo recebido 194\n");
 						bytes_avanco=0;
 						n=0;
+						break;
 					}
 					if(nbytes>1)
 					{
 						shift_left_buffer(buffer,nbytes,n);
-						printf("Buffer has:%s\n and nbytes=%d\n",buffer,nbytes);
+						//printf("202:Buffer has:%s\n and nbytes=%d\n",buffer,nbytes);/////////////////////////////
 						n=n-nbytes;
-						printf("nis is:%d\n",n);
+						printf("204:nis is:%d and packet_left=%d\n",n,packet_left);								/////////////////////////////
 						continue;
 					}
 				}
-				printf("Cheguei a 1\n");
+				printf("208:Cheguei a 1\n");										/////////////////////////////
 				ptr = buffer; 
 				if(find_complete_message(ptr,msgID, &ncount) == 0){ 
 					bytes_avanco=ncount;
-					printf("Cheguei a 2 e deixo bytes de avanço: %d\n",bytes_avanco);
+					printf("212:Cheguei a 2 e deixo bytes de avanço: %d\n",bytes_avanco);
 					break;
 				}
-				char aux[128];
+				printf("215\n");
+				char aux[128]= {'\0'};;
 				memcpy(aux,buffer,ncount); //char *aux;	
 				shift_left_buffer(buffer,ncount,n);
 				n=n-ncount;
+				printf("220\n");
 				if(handle_PEERmessage(aux,user) == 0){printf("Unable to process PEER message\n"); clean_exit(user); exit(1);}		
 			}
 					
