@@ -144,7 +144,7 @@ int main(int argc, char **argv)
 			//printf("\n 144: n=%d and buffer has: %s\n",n,buffer);				/////////////////////////////
 			if(packet_left > 0)
 			{
-				printf("Temos um pacote incompleto\n");
+				//printf("Temos um pacote incompleto\n");
 				nbytes=handle_PACKETmessage(buffer,packet,user,&packet_left,packet_total,n);
 				if(nbytes==1) //O pacote ainda não foi todo recebido.
 				{
@@ -191,7 +191,7 @@ int main(int argc, char **argv)
 					nbytes=handle_PACKETmessage(buffer,packet,user,&packet_left,packet_total,n);
 					if(nbytes==1) //O pacote ainda não foi todo recebido.
 					{
-						printf("O pacote não foi todo recebido 194\n");
+					//	printf("O pacote não foi todo recebido 194\n");
 						bytes_avanco=0;
 						n=0;
 						break;
