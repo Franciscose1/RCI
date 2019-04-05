@@ -74,6 +74,7 @@ int send_tcp(char *msg, int fd)
 
   n = strlen(msg);
   ptr = &msg[0];
+  //printf("Size of message to send: %d",n);
   while(n>0)
   {
     if((nw=write(fd,ptr,n))<=0){printf("error: write\n"); return 0;}

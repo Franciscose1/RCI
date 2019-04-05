@@ -141,7 +141,7 @@ int main(int argc, char **argv)
 		if((n=read(user->fd_tcp_mont,buffer+bytes_avanco,128))!=0)
 		{
 			bytes_avanco=0;
-			//printf("\n n=%d and buffer has: %s\n",n,buffer);				/////////////////////////////
+			//printf("\n 144: n=%d and buffer has: %s\n",n,buffer);				/////////////////////////////
 			if(packet_left > 0)
 			{
 				printf("Temos um pacote incompleto\n");
@@ -199,17 +199,18 @@ int main(int argc, char **argv)
 					if(nbytes>1)
 					{
 						shift_left_buffer(buffer,nbytes,n);
-						//printf("202:Buffer has:%s\n and nbytes=%d\n",buffer,nbytes);/////////////////////////////
+					//	printf("202:Buffer has:%s\n and nbytes=%d\n",buffer,nbytes);/////////////////////////////
 						n=n-nbytes;
-						//printf("204:nis is:%d and packet_left=%d\n",n,packet_left);								/////////////////////////////
+						printf("204:nis is:%d and packet_left=%d\n",n,packet_left);
+														/////////////////////////////
 						continue;
 					}
 				}
 				//printf("208:Cheguei a 1\n");										/////////////////////////////
 				ptr = buffer; 
 				if(find_complete_message(ptr,msgID, &ncount) == 0){ 
-					bytes_avanco=ncount;
-					//printf("212:Cheguei a 2 e deixo bytes de avanço: %d\n",bytes_avanco); /////////////////////////////
+					bytes_avanco=n;
+					printf("212:Cheguei a 2 e deixo bytes de avanço: %d\n",bytes_avanco); /////////////////////////////
 					break;
 				}
 				//printf("215\n");						/////////////////////////////
@@ -217,6 +218,7 @@ int main(int argc, char **argv)
 				memcpy(aux,buffer,ncount); //char *aux;	
 				shift_left_buffer(buffer,ncount,n);
 				n=n-ncount;
+			//	printf("220:Aux has %s\n",aux);
 				//printf("220\n");					/////////////////////////////
 				if(handle_PEERmessage(aux,user) == 0){printf("Unable to process PEER message\n"); clean_exit(user); exit(1);}		
 			}
@@ -273,13 +275,16 @@ int main(int argc, char **argv)
         msg_in_protocol(buffer,"WHOISROOT",user);
         reach_udp(user->rsaddr,user->rsport,buffer);
         if(user->detailed_info == ON) write(1,buffer,strlen(buffer));
-
-        if(time(NULL)-timer_start > POPQUERY_TIME)
-        {
+		
+		strcpy(buffer,"POPQUERY\n");
+        handle_PEERmessage(buffer,user);
+        
+        //if(time(NULL)-timer_start > POPQUERY_TIME)
+        //{
           //Faz POPQUERY para refrescar POPs
-          strcpy(buffer,"POPQUERY\n");
-          handle_PEERmessage(buffer,user);
-        }
+          //strcpy(buffer,"POPQUERY\n");
+          //handle_PEERmessage(buffer,user);
+        //}
 
         //Reinicia o timer
         timer_start = time(NULL);

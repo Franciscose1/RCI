@@ -30,7 +30,7 @@ int find_complete_message(char *ptr,char *msgID, int *ncount)
 	
 	while(1){
 		if(sscanf(ptr, "%s%n", msgID, &n)==1){
-			ncount += n;
+			*ncount += n;
 			ptr += n;
 			if (*ptr == '\n')
 				return 1;
@@ -268,7 +268,7 @@ int handle_SOURCEmessage(User *user)
         
         //Transforma em modo protocolo
        ///////////// printf("size of message:%d and %X\n",nbytes,nbytes);
-       char msg[nbytes+9];
+       char msg[nbytes+8];
        msg[0] = '\0';
         //char *msg = (char *)malloc(nbytes+9);
 		snprintf(msg,nbytes+8, "DA %04X\n",nbytes);
@@ -278,7 +278,21 @@ int handle_SOURCEmessage(User *user)
 		//printf("msg is:%s\n",msg);
 		for(n=0; n < user->tcpsessions; n++) //Envia para os a montante
 			if(user->fd_clients[n] != 0)
-				if(send_tcp(msg,user->fd_clients[n]) == 0) return 0;
+			{
+				int size=nbytes+8;
+				char *ptra;
+				ptra = &msg[0];
+				while(size>0)
+				{
+					if((nw=write(user->fd_clients[n],ptra,size))<=0){printf("error: write\n"); return 0;}
+					size-=nw; ptr+=nw;
+				}	
+			}
+				
+			
+			
+			
+				//if(send_tcp(msg,user->fd_clients[n]) == 0) return 0;
 		//free(msg);	
 
 	}
@@ -406,18 +420,25 @@ int handle_PACKETmessage(char *msg, char *packet, User *user, int *nbytesleft,in
         
         //Transforma em modo protocolo
         //char *aux = (char *)malloc(totalbytes+9);
-        char aux[totalbytes+9];
+        char aux[totalbytes+8];
         aux[0] = '\0';
 		snprintf(aux,totalbytes+8, "DA %04X\n",totalbytes);
 		//printf("msg is:%s\n",msg);
 		snprintf(aux+8,totalbytes+8, "%s",packet);
 		
-		//printf("msg is:%s\n",msg);
-
-
+		//printf("415: msg sending is:%s\n",aux);
 		for(n=0; n < user->tcpsessions; n++) //Envia para os a montante
 			if(user->fd_clients[n] != 0)
-				if(send_tcp(aux,user->fd_clients[n]) == 0) return 0;		
+			{
+				int size=totalbytes+8;
+				char *ptra;
+				ptra = &aux[0];
+				while(size>0)
+				{
+					if((nw=write(user->fd_clients[n],ptra,size))<=0){printf("error: write\n"); return 0;}
+					size-=nw; ptr+=nw;
+				}
+			}		
 		//free(aux);
 		retorno=*nbytesleft;	
 		*nbytesleft=0;
