@@ -44,9 +44,6 @@ int find_complete_message(char *ptr,char *msgID, int *ncount,int max)
  } 
   
 
-
-
-
 int str_to_IP_PORT(char *ptr, char *ipaddr, char *port)
 {
   int n = 0, ncount = 0;
@@ -106,6 +103,7 @@ void USER_init(User *user)
   user->display = ON;
   user->detailed_info = OFF;
   user->synopse = OFF;
+ // user->format = ON;//ON is ASCII
   memset(user->uproot,'\0',sizeof(user->uproot));
 }
 
@@ -703,13 +701,13 @@ int handle_STDINmessage(char *msg, User *user) //STDIN
 	char buffer[128] = {'\0'};
 
 	strcpy(buffer,msg);
-	if(strcmp(buffer,"streams\n")==0)
+	if((strcmp(buffer,"streams\n")==0) || (strcmp(buffer,"STREAMS\n")==0))
   {
 		strcpy(msg,"DUMP\n");
 		if(reach_udp(user->rsaddr,user->rsport,msg) == 0) return 0;
     write(1,msg,strlen(msg));
   }
-	if(strcmp(buffer,"status\n")==0)
+	if((strcmp(buffer,"status\n")==0) ||(strcmp(buffer,"STATUS\n")==0))
 	{
     printf("\n***STATUS***\n");
 		printf("Stream name: %s \n",user->stream_name); //identificação do stream;
@@ -772,31 +770,36 @@ int handle_STDINmessage(char *msg, User *user) //STDIN
     }
     printf("************\n");
 	}
-	if(strcmp(buffer,"display on\n")==0)
+	if((strcmp(buffer,"display on\n")==0)||(strcmp(buffer,"display ON\n")==0))
 		user->display = ON;
-	if(strcmp(buffer,"display off\n")==0)
+	if((strcmp(buffer,"display off\n")==0) ||(strcmp(buffer,"display OFF\n")==0))
 		user->display = OFF;
-	if(strcmp(buffer,"debug on\n")==0)
+	if((strcmp(buffer,"debug on\n")==0) ||(strcmp(buffer,"debug ON\n")==0))
 		user->detailed_info = ON;
-	if(strcmp(buffer,"debug off\n")==0)
+	if((strcmp(buffer,"debug off\n")==0)||(strcmp(buffer,"debug OFF\n")==0))
 		user->detailed_info = OFF;
-	if(strcmp(buffer,"tree\n")==0)
+		
+	if((strcmp(buffer,"tree\n")==0) ||(strcmp(buffer,"TREE\n")==0))
 	{
-    if(user->state == access_server)
-    {
-      printf("%s:%s:%s\n",user->stream_name,user->stream_addr,user->stream_port);
-      strcpy(buffer,"TREEQUERY\n");
-      handle_PEERmessage(buffer,user);
-    }else{
-      printf("I am not the root :(\n");
-    }
+		if(user->state == access_server)
+		{
+		  printf("%s:%s:%s\n",user->stream_name,user->stream_addr,user->stream_port);
+		  strcpy(buffer,"TREEQUERY\n");
+		  handle_PEERmessage(buffer,user);
+		}else{
+		  printf("I am not the root :(\n");
+		}
 	}
-	if(strcmp(buffer,"exit\n")==0)
+	if((strcmp(buffer,"exit\n")==0) || (strcmp(buffer,"EXIT\n")==0))
 	{
     clean_exit(user);
     printf("EXIT SUCCESSFULL\n");
 		return(0);
 	}
+	//if((strcmp(buffer,"format ascii\n")==0)||(strcmp(buffer,"format ASCII\n")==0))
+	//	user->format = ON;
+	//if((strcmp(buffer,"format hex\n")==0)||(strcmp(buffer,"format HEX\n")==0))
+	//	user->format = OFF;	
 
 return 1;
 }

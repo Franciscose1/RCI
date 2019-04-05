@@ -26,6 +26,7 @@ struct USER{
   int tsecs;
   int display;
   int detailed_info;
+  //int format;
   int synopse;
   enum {access_server,out,waiting,in} state;
   int fd_udp_serv, fd_tcp_serv, fd_tcp_mont, *fd_clients;
