@@ -253,9 +253,7 @@ int handle_SOURCEmessage(User *user)
 	char *ptr;
 	char buffer[128] = {'\0'};
 	if((nbytes=read(user->fd_tcp_mont,buffer,128))!=0)
-      {
-		//////////  printf("size of message:%d and %X\n",nbytes,nbytes);
-		  
+    {
         if(nbytes==-1){printf("error: read\n"); exit(1);}
         
         if(user->display == ON)
@@ -268,18 +266,11 @@ int handle_SOURCEmessage(User *user)
 			  aux-=nw; ptr+=nw;
 			}
 		}
-        
-        
         //Transforma em modo protocolo
-       ///////////// printf("size of message:%d and %X\n",nbytes,nbytes);
        char msg[nbytes+8];
        msg[0] = '\0';
-        //char *msg = (char *)malloc(nbytes+9);
 		snprintf(msg,nbytes+8, "DA %04X\n",nbytes);
-		//printf("msg is:%s\n",msg);
 		snprintf(msg+8,nbytes+8, "%s",buffer);
-		//memcpy(msg+8,buffer,nbytes);
-		//printf("msg is:%s\n",msg);
 		for(n=0; n < user->tcpsessions; n++) //Envia para os a montante
 			if(user->fd_clients[n] != 0)
 			{
@@ -292,13 +283,6 @@ int handle_SOURCEmessage(User *user)
 					size-=nw; ptr+=nw;
 				}	
 			}
-				
-			
-			
-			
-				//if(send_tcp(msg,user->fd_clients[n]) == 0) return 0;
-		//free(msg);	
-
 	}
 return(1);	
 }
@@ -409,8 +393,7 @@ int handle_PACKETmessage(char *msg, char *packet, User *user, int *nbytesleft,in
 	int retorno,nw,n;
 	int pos, auxan;
 	char *ptr;
-	//printf("Entrámos no handle packet\n");
-	//Caso o packet completo já esteja a meio e esteja o resto dentro do pacote que recebeu.
+	//Caso o packet completo já esteja a meio ou no inicio e esteja o resto dentro do pacote que recebeu.
 	if(*nbytesleft <=bytesread ){
 		pos=(totalbytes-*nbytesleft);
 		memcpy(packet+pos,msg,*nbytesleft);
@@ -427,14 +410,10 @@ int handle_PACKETmessage(char *msg, char *packet, User *user, int *nbytesleft,in
 		}
         
         //Transforma em modo protocolo
-        //char *aux = (char *)malloc(totalbytes+9);
         char aux[totalbytes+8];
         aux[0] = '\0';
 		snprintf(aux,totalbytes+8, "DA %04X\n",totalbytes);
-		//printf("msg is:%s\n",msg);
 		snprintf(aux+8,totalbytes+8, "%s",packet);
-		
-		//printf("415: msg sending is:%s\n",aux);
 		for(n=0; n < user->tcpsessions; n++) //Envia para os a montante
 			if(user->fd_clients[n] != 0)
 			{
@@ -447,7 +426,6 @@ int handle_PACKETmessage(char *msg, char *packet, User *user, int *nbytesleft,in
 					size-=nw; ptr+=nw;
 				}
 			}		
-		//free(aux);
 		retorno=*nbytesleft;	
 		*nbytesleft=0;
 		//Retorna o numero de bytes que leu do pacote para poder saber onde continuar a ler o resto do pacote

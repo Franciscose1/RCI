@@ -125,8 +125,6 @@ int main(int argc, char **argv)
     if(FD_ISSET(user->fd_tcp_mont,&rfds) && user->state != out)     //Fonte/Acima
     {
 		
-		
-		
 		if(user->state==access_server)//Caso seja o root, recebe da fonte em formato fora do protocolo
 		{   
 			if(handle_SOURCEmessage(user)==0){
@@ -136,15 +134,11 @@ int main(int argc, char **argv)
 			continue;
 		}
 		
-		
-		
 		if((n=read(user->fd_tcp_mont,buffer+bytes_avanco,128))!=0)
 		{
 			bytes_avanco=0;
-			//printf("\n 144: n=%d and buffer has: %s\n",n,buffer);				/////////////////////////////
 			if(packet_left > 0)
 			{
-				//printf("Temos um pacote incompleto\n");
 				nbytes=handle_PACKETmessage(buffer,packet,user,&packet_left,packet_total,n);
 				if(nbytes==1) //O pacote ainda não foi todo recebido.
 				{
@@ -158,17 +152,14 @@ int main(int argc, char **argv)
 				}
 			}
 				
-
 			while(n >0)
 			{
-				
 				if(sscanf(buffer, "%s%n", msgID, &a)==0)
 				{
 					printf("Failed to read msg_ID\n");
 					return 0;
 				}
-				//printf("Buffer has:%s",buffer); 		/////////////////////////////
-				//printf("String is %s\n",msgID);    ///////////////////////////////////
+
 				if(strcmp(msgID,"DA")==0)
 				{	
 					if(n<7)
@@ -176,22 +167,15 @@ int main(int argc, char **argv)
 						bytes_avanco=n;
 						break;
 					}
-					//printf("Buffer antes de shift: %s\n",buffer);///////////////////////////////////
 					shift_left_buffer(buffer,3,n);
 					n=n-3;
-					//printf("Buffer depois de shift2: %s\n",buffer);///////////////////////////////////
 					sscanf(buffer,"%X",&packet_total);
 					packet_left=packet_total;
-					//printf("Size of packet:%d\n",packet_total);////////////////////////////////////////
-					
 					shift_left_buffer(buffer,5,n);
 					n=n-5;
-					//isto
-					//printf("Buffer depois de shift3: %s\n",buffer);///////////////////////////////////
 					nbytes=handle_PACKETmessage(buffer,packet,user,&packet_left,packet_total,n);
 					if(nbytes==1) //O pacote ainda não foi todo recebido.
 					{
-					//	printf("O pacote não foi todo recebido 194\n");
 						bytes_avanco=0;
 						n=0;
 						break;
@@ -199,28 +183,19 @@ int main(int argc, char **argv)
 					if(nbytes>1)
 					{
 						shift_left_buffer(buffer,nbytes,n);
-					//	printf("202:Buffer has:%s\n and nbytes=%d\n",buffer,nbytes);/////////////////////////////
 						n=n-nbytes;
-					//	printf("204:nis is:%d and packet_left=%d\n",n,packet_left);
-														/////////////////////////////
 						continue;
 					}
 				}
-				//printf("208:Cheguei a 1\n");										/////////////////////////////
 				ptr = buffer; 
 				if(find_complete_message(ptr,msgID, &ncount,n) == 0){ 
 					bytes_avanco=n;
-				//	printf("212:Cheguei a 2 e deixo bytes de avanço: %d\n",bytes_avanco); /////////////////////////////
 					break;
 				}
-				//printf("215\n");						/////////////////////////////
 				char aux[128]= {'\0'};
 				memcpy(aux,buffer,ncount); //char *aux;	
 				shift_left_buffer(buffer,ncount,n);
 				n=n-ncount;
-				//aux[ncount+1]='\0';                             ///////////////////////////// TESTAR ISTO
-			//	printf("220:Aux has %s\n",aux);
-				//printf("220\n");					/////////////////////////////
 				if(handle_PEERmessage(aux,user) == 0){printf("Unable to process PEER message\n"); clean_exit(user); exit(1);}		
 			}
 					
@@ -232,10 +207,6 @@ int main(int argc, char **argv)
 			dissipate("BS\n",user);
 		  }
     }
-    
-    
-    
-    
     
     for(i=0;i<user->tcpsessions;i++)
     {
@@ -302,23 +273,3 @@ int main(int argc, char **argv)
 
 }
 
-//Pedro's PC
-//./iamroot grupo44:193.136.138.142:58001 -i 192.168.1.67 -u 58001 -t 58001
-
-//My Fonte
-//./iamroot grupo44:192.168.1.67:57000 -i 192.168.1.67 -u 58001 -t 58001
-
-// ./iamroot grupo44:192.136.138.142:59000 -i 194.210.157.158 -d -b -x 30
-// ./iamroot grupo44:194.210.157.158:57000 -i 194.210.156.33 -d -b -x 30 -u 58001 -t 58001
-// nc -l 57000 
-
-
-
-
-//cd /Users/pedroflores/Documents/IST/5Ano2Sem/RCI/ProjectRepository
-
-/* Duvidas
-1 - Se o descritor não estiver armado e outro fizer um write, o que é que o
-write retorna?
-2 - Se der para fazer write, quando armar o descritor ele vai ser logo ativo pelo select?
-*/
