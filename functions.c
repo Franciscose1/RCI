@@ -24,7 +24,7 @@ int str_to_msgID(char *ptr, char *msgID)
   return ncount;
 }
 
-int find_complete_message(char *ptr,char *msgID, int *ncount)
+int find_complete_message(char *ptr,char *msgID, int *ncount,int max)
 {
 	int n = 0;
 	
@@ -32,6 +32,8 @@ int find_complete_message(char *ptr,char *msgID, int *ncount)
 		if(sscanf(ptr, "%s%n", msgID, &n)==1){
 			*ncount += n;
 			ptr += n;
+			if(*ncount==max)
+				return 0;
 			if (*ptr == '\n')
 				return 1;
 		}else{
@@ -257,13 +259,17 @@ int handle_SOURCEmessage(User *user)
 		//////////  printf("size of message:%d and %X\n",nbytes,nbytes);
 		  
         if(nbytes==-1){printf("error: read\n"); exit(1);}
-		ptr=&buffer[0];
-		aux=nbytes;
-        while(aux>0)
-        {
-          if((nw=write(1,ptr,nbytes))<=0){printf("error: write\n"); exit(1);}
-          aux-=nw; ptr+=nw;
-        }
+        
+        if(user->display == ON)
+		{
+			ptr=&buffer[0];
+			aux=nbytes;
+			while(aux>0)
+			{
+			  if((nw=write(1,ptr,nbytes))<=0){printf("error: write\n"); exit(1);}
+			  aux-=nw; ptr+=nw;
+			}
+		}
         
         
         //Transforma em modo protocolo
@@ -411,12 +417,16 @@ int handle_PACKETmessage(char *msg, char *packet, User *user, int *nbytesleft,in
 		pos=(totalbytes-*nbytesleft);
 		memcpy(packet+pos,msg,*nbytesleft);
 		ptr=&packet[0];
-		auxan=totalbytes;
-        while(auxan>0)
-        {
-          if((nw=write(1,ptr,totalbytes))<=0){printf("error: write\n"); exit(1);}
-          auxan-=nw; ptr+=nw;
-        }
+		
+		if(user->display == ON)
+		{
+			auxan=totalbytes;
+			while(auxan>0)
+			{
+			  if((nw=write(1,ptr,totalbytes))<=0){printf("error: write\n"); exit(1);}
+			  auxan-=nw; ptr+=nw;
+			}
+		}
         
         //Transforma em modo protocolo
         //char *aux = (char *)malloc(totalbytes+9);

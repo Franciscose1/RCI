@@ -201,23 +201,24 @@ int main(int argc, char **argv)
 						shift_left_buffer(buffer,nbytes,n);
 					//	printf("202:Buffer has:%s\n and nbytes=%d\n",buffer,nbytes);/////////////////////////////
 						n=n-nbytes;
-						printf("204:nis is:%d and packet_left=%d\n",n,packet_left);
+					//	printf("204:nis is:%d and packet_left=%d\n",n,packet_left);
 														/////////////////////////////
 						continue;
 					}
 				}
 				//printf("208:Cheguei a 1\n");										/////////////////////////////
 				ptr = buffer; 
-				if(find_complete_message(ptr,msgID, &ncount) == 0){ 
+				if(find_complete_message(ptr,msgID, &ncount,n) == 0){ 
 					bytes_avanco=n;
-					printf("212:Cheguei a 2 e deixo bytes de avanço: %d\n",bytes_avanco); /////////////////////////////
+				//	printf("212:Cheguei a 2 e deixo bytes de avanço: %d\n",bytes_avanco); /////////////////////////////
 					break;
 				}
 				//printf("215\n");						/////////////////////////////
-				char aux[128]= {'\0'};;
+				char aux[128]= {'\0'};
 				memcpy(aux,buffer,ncount); //char *aux;	
 				shift_left_buffer(buffer,ncount,n);
 				n=n-ncount;
+				//aux[ncount+1]='\0';                             ///////////////////////////// TESTAR ISTO
 			//	printf("220:Aux has %s\n",aux);
 				//printf("220\n");					/////////////////////////////
 				if(handle_PEERmessage(aux,user) == 0){printf("Unable to process PEER message\n"); clean_exit(user); exit(1);}		

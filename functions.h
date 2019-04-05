@@ -11,7 +11,7 @@
 #define max(A,B) ((A)>=(B)?(A):(B))
 
 struct USER{
-	//IP do a montante
+	//P do a montante
 	//IP dos clientes atraves da resposta do welcome(new_pop)
   char stream_name[128];
   char stream_addr[128];//Fonte
@@ -53,7 +53,7 @@ int handle_PACKETmessage(char *msg, char *packet, User *user, int *nbytesleft,in
 int handle_PEERmessage(char *, User *);
 //Cenas
 int shift_left_buffer(char *buffer,int nbytes,int n);
-int find_complete_message(char *ptr,char *msgID, int *ncount);
+int find_complete_message(char *ptr,char *msgID, int *ncount, int max);
 
 //Mecanismo de adesão à árvore
 int join_tree(User *);
